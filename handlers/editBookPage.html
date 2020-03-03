@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать книгу</title>
+</head>
+<body>
+<h2>Редактировать книгу</h2>
+<form method="POST" action="edit_book_post?id={{.id}}">
+    <label>Введите новое название книги</label><br>
+    <input type="text" name="name" /><br><br>
+    <input type="submit" value="Изменить" />
+</form>
+</body>
+</html>
