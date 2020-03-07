@@ -1,33 +1,25 @@
 package handlers
 
 import (
+    "../logic"
     "../models"
-    "../repository"
     "encoding/json"
-    "fmt"
     "html/template"
     "io/ioutil"
     "net/http"
     "strconv"
 )
 
-var connector = repository.Connector{Host: "http://localhost:8888"}
-
 func GetProductsList(w http.ResponseWriter, _ *http.Request) {
     w.Header().Set("Content-Type", "application/json")
-    resp, requestError := connector.Get("/get_products")
+    response, requestError := logic.Get("get_products")
     if requestError != nil {
-        //fmt.Println(requestError.Error())
-        http.Error(w, requestError.Error(), http.StatusInternalServerError)
+        // ToDO: log
+        http.Error(w, requestError.ErrorString, requestError.ErrorCode)
         return
     }
-    if resp.StatusCode != http.StatusOK {
-        //fmt.Println(resp.Status)
-        http.Error(w, resp.Status, resp.StatusCode)
-        return
-    }
-    defer resp.Body.Close()
-    body, bodyParseError := ioutil.ReadAll(resp.Body)
+    defer response.Body.Close()
+    body, bodyParseError := ioutil.ReadAll(response.Body)
     if bodyParseError != nil {
         //fmt.Println(bodyParseError.Error())
         http.Error(w, bodyParseError.Error(), http.StatusInternalServerError)
@@ -77,10 +69,10 @@ func GetProductsList(w http.ResponseWriter, _ *http.Request) {
             return
         }
     }
-    jsonData, parseError := json.Marshal(array)
-    if parseError != nil {
+    jsonData, jsonError := json.Marshal(array)
+    if jsonError != nil {
        //fmt.Println(parseError.Error())
-       http.Error(w, parseError.Error(), http.StatusInternalServerError)
+       http.Error(w, jsonError.Error(), http.StatusInternalServerError)
        return
     }
     _, writeError := w.Write(jsonData)
@@ -105,82 +97,49 @@ func AddProduct(w http.ResponseWriter, r *http.Request) {
         http.ServeFile(w, r, "frontend/addProduct.html")
     } else if r.Method == http.MethodPost {
         w.Header().Set("Content-Type", "application/json")
-        jsonData, parseError := json.Marshal(
-            models.Product{
-                Name: r.FormValue("name"),
-                Id: 0,
-                Category: r.FormValue("category")})
-        if parseError != nil {
-            //fmt.Println(parseError.Error())
-            http.Error(w, parseError.Error(), http.StatusBadRequest)
-            return
-        }
-        //fmt.Printf("%v\n", string(jsonData))
-        resp, requestError := connector.Post("/add_product", jsonData)
-        if requestError != nil {
-            //fmt.Println(requestError.Error())
-            http.Error(w, requestError.Error(), http.StatusInternalServerError)
-            return
-        }
-        if resp.StatusCode != http.StatusOK {
-            //fmt.Println(resp.Status)
-            http.Error(w, resp.Status, resp.StatusCode)
-            return
-        }
-        defer resp.Body.Close()
-        body, bodyParseError := ioutil.ReadAll(resp.Body)
+        body := r.Body
+        defer body.Close()
+        readBody, bodyParseError := ioutil.ReadAll(body)
         if bodyParseError != nil {
-           //fmt.Println(bodyParseError.Error())
-            http.Error(w, bodyParseError.Error(), http.StatusInternalServerError)
-           return
-        }
-        productId, intError := strconv.Atoi(string(body))
-        if intError != nil {
-            //fmt.Println(intError.Error())
-            http.Error(w, intError.Error(), http.StatusInternalServerError)
+            http.Error(w, bodyParseError.Error(), http.StatusBadRequest)
             return
         }
-        writeError := json.NewEncoder(w).Encode(struct{Id int `json:"id"`}{productId})
+        response, requestError := logic.Post("add_product", &readBody)
+        if requestError != nil {
+            // ToDO: log
+            http.Error(w, requestError.ErrorString, requestError.ErrorCode)
+            return
+        }
+        writeData, jsonError := logic.GetProductJSON(response.Body, nil)
+        if jsonError != nil {
+            // ToDO: log
+            http.Error(w, jsonError.ErrorString, jsonError.ErrorCode)
+            return
+        }
+        _, writeError := w.Write(*writeData)
         if writeError != nil {
-           //fmt.Println(writeError.Error())
-           http.Error(w, writeError.Error(), http.StatusInternalServerError)
-           return
+            //fmt.Println(writeError.Error())
+            http.Error(w, writeError.Error(), http.StatusInternalServerError)
+            return
         }
     }
 }
 
 func ProductCard(w http.ResponseWriter, r *http.Request) {
     w.Header().Set("Content-Type", "application/json")
-    resp, requestError := connector.Get("/" + r.URL.Query().Get("id"))
+    response, requestError := logic.Get(r.URL.Query().Get("id"))
     if requestError != nil {
-        //fmt.Println(err.Error())
-        http.Error(w, requestError.Error(), http.StatusInternalServerError)
+        // ToDO: log
+        http.Error(w, requestError.ErrorString, requestError.ErrorCode)
         return
     }
-    defer resp.Body.Close()
-    body, bodyParseError := ioutil.ReadAll(resp.Body)
-    if bodyParseError != nil {
-        //fmt.Println(bodyParseError.Error())
-        http.Error(w, bodyParseError.Error(), http.StatusInternalServerError)
+    writeData, jsonError := logic.GetProductJSON(response.Body, nil)
+    if jsonError != nil {
+        // ToDO: log
+        http.Error(w, jsonError.ErrorString, jsonError.ErrorCode)
         return
     }
-    if resp.StatusCode != http.StatusOK {
-        //fmt.Println(resp.Status)
-        http.Error(w, resp.Status, resp.StatusCode)
-        return
-    }
-    var data models.Product
-    unmarshalError := json.Unmarshal(body, &data)
-    if unmarshalError != nil {
-        //fmt.Println(unmarshalError.Error())
-        http.Error(w, unmarshalError.Error(), http.StatusInternalServerError)
-        return
-    }
-    writeError := json.NewEncoder(w).Encode(
-        models.Product{
-            Name: data.Name,
-            Id: data.Id,
-            Category: data.Category})
+    _, writeError := w.Write(*writeData)
     if writeError != nil {
         //fmt.Println(writeError.Error())
         http.Error(w, writeError.Error(), http.StatusInternalServerError)
@@ -216,32 +175,33 @@ func EditProduct(w http.ResponseWriter, r *http.Request) {
         var data models.Product
         intId, intError := strconv.Atoi(r.URL.Query().Get("id"))
         if intError != nil {
-            fmt.Println(intError.Error())
+            //fmt.Println(intError.Error())
             http.Error(w, intError.Error(), http.StatusBadRequest)
+            return
         }
         data.Id = intId
-        if len(r.FormValue("name")) > 0 {
-            data.Name = r.FormValue("name")
-        }
-        if len(r.FormValue("category")) > 0 {
-            data.Category = r.FormValue("category")
-        }
-        jsonData, parseError := json.Marshal(data)
-        if parseError != nil {
-            //fmt.Println(parseError.Error())
-            http.Error(w, parseError.Error(), http.StatusInternalServerError)
+        jsonData, getJsonError := logic.GetProductJSON(r.Body, &data)
+        if getJsonError != nil {
+            // ToDO: log
+            http.Error(w, getJsonError.ErrorString, getJsonError.ErrorCode)
             return
         }
-        fmt.Printf("%v\n", string(jsonData))
-        resp, requestError := connector.Post("/edit_product", jsonData)
+        response, requestError := logic.Post("edit_product", jsonData)
         if requestError != nil {
-            //fmt.Println(requestError.Error())
-            http.Error(w, requestError.Error(), http.StatusInternalServerError)
+            // ToDO: log
+            http.Error(w, requestError.ErrorString, requestError.ErrorCode)
             return
         }
-        if resp.StatusCode != http.StatusOK {
-            //fmt.Println(resp.Status)
-            http.Error(w, resp.Status, resp.StatusCode)
+        writeData, jsonError := logic.GetProductJSON(response.Body, nil)
+        if jsonError != nil {
+            // ToDO: log
+            http.Error(w, jsonError.ErrorString, jsonError.ErrorCode)
+            return
+        }
+        _, writeError := w.Write(*writeData)
+        if writeError != nil {
+            //fmt.Println(writeError.Error())
+            http.Error(w, writeError.Error(), http.StatusInternalServerError)
             return
         }
         //defer resp.Body.Close()
@@ -257,6 +217,7 @@ func EditProduct(w http.ResponseWriter, r *http.Request) {
 }
 
 func DeleteProduct(w http.ResponseWriter, r *http.Request) {
+    w.Header().Set("Content-Type", "application/json")
     id, intError := strconv.Atoi(r.URL.Query().Get("id"))
     if intError != nil {
         //fmt.Println(intError)
@@ -265,19 +226,26 @@ func DeleteProduct(w http.ResponseWriter, r *http.Request) {
     }
     jsonData, parseError := json.Marshal(struct{Id int `json:"id"`}{id})
     if parseError != nil {
-        fmt.Println(parseError.Error())
+        //fmt.Println(parseError.Error())
         http.Error(w, parseError.Error(), http.StatusInternalServerError)
         return
     }
-    resp, requestError := connector.Post("/delete_product", jsonData)
+    response, requestError := logic.Post("delete_product", &jsonData)
     if requestError != nil {
-        fmt.Println(requestError.Error())
-        http.Error(w, requestError.Error(), http.StatusInternalServerError)
+        // ToDO: log
+        http.Error(w, requestError.ErrorString, requestError.ErrorCode)
         return
     }
-    if resp.StatusCode != http.StatusOK {
-        //fmt.Println(resp.Status)
-        http.Error(w, resp.Status, resp.StatusCode)
+    writeData, jsonError := logic.GetProductJSON(response.Body, nil)
+    if jsonError != nil {
+        // ToDO: log
+        http.Error(w, jsonError.ErrorString, jsonError.ErrorCode)
+        return
+    }
+    _, writeError := w.Write(*writeData)
+    if writeError != nil {
+        //fmt.Println(writeError.Error())
+        http.Error(w, writeError.Error(), http.StatusInternalServerError)
         return
     }
 }
