@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"../../common/models"
 	"../models"
 	"encoding/json"
 	"io"
@@ -8,20 +9,18 @@ import (
 	"net/http"
 )
 
-func GetProductJSON(responseBody io.ReadCloser, model *models.Product)(*[]byte, *models.Error) {
+func GetProductJSON(responseBody io.ReadCloser)(*[]byte, *commonModels.Error) {
 	defer responseBody.Close()
 	body, bodyParseError := ioutil.ReadAll(responseBody)
 	if bodyParseError != nil {
-		return nil, &models.Error{
+		return nil, &commonModels.Error{
 			ErrorString: bodyParseError.Error(),
 			ErrorCode: http.StatusInternalServerError}
 	}
-	if model == nil {
-		model = &models.Product{}
-	}
+	model := &models.Product{}
 	unmarshalError := json.Unmarshal(body, model)
 	if unmarshalError != nil {
-		return nil, &models.Error{
+		return nil, &commonModels.Error{
 			ErrorString: unmarshalError.Error(),
 			ErrorCode: http.StatusInternalServerError}
 	}
@@ -31,7 +30,7 @@ func GetProductJSON(responseBody io.ReadCloser, model *models.Product)(*[]byte, 
 			Id: model.Id,
 			Category: model.Category})
 	if marshalError != nil {
-		return nil, &models.Error{
+		return nil, &commonModels.Error{
 			ErrorString: marshalError.Error(),
 			ErrorCode: http.StatusInternalServerError}
 	}
