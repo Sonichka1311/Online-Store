@@ -1,16 +1,19 @@
 {
   "openapi" : "3.0.1",
   "info" : {
-    "title" : "defaultTitle",
-    "description" : "defaultDescription",
+    "title" : "Online-shop",
+    "description" : "Simple online-shop with authorization",
     "version" : "0.1"
   },
   "servers" : [ {
+    "url" : "http://localhost:3687"
+  }, {
     "url" : "http://localhost:8080"
   } ],
   "paths" : {
-    "/edit_product" : {
-      "post" : {
+    "/product" : {
+      "get" : {
+        "tags" : [ "Shop" ],
         "description" : "Auto generated using Swagger Inspector",
         "parameters" : [ {
           "name" : "id",
@@ -22,6 +25,41 @@
             "type" : "string"
           },
           "example" : "1"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/inline_response_200"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"name\":\"mango\",\"id\":1,\"category\":\"food\"}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:8080"
+        } ]
+      },
+      "put" : {
+        "tags" : [ "Shop" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzE5OTgsImVtYWlsIjoic29uaWFAbWFpbC5ydSJ9.lDC9Oj37nN9U4G6CZvvj4zN3FiBfy5McvbNOVaJ8NM0"
         } ],
         "requestBody" : {
           "content" : {
@@ -31,13 +69,19 @@
               },
               "examples" : {
                 "0" : {
-                  "value" : "{\n    \"name\": \"apple\",\n    \"category\": \"food\"\n}"
+                  "value" : "{\n    \"name\": \"mango\",\n    \"category\": \"food\"\n}"
                 },
                 "1" : {
-                  "value" : "{\n    \"name\": \"pineapple\"\n}"
+                  "value" : "{\n    \"id\": 0,\n    \"category\": \"fruits\"\n}"
                 },
                 "2" : {
-                  "value" : "{\n    \"category\": \"fruits\"\n}"
+                  "value" : "{\n    \"name\": \"pineapple\",\n    \"id\": 0,\n    \"category\": \"fruits\"\n}"
+                },
+                "3" : {
+                  "value" : "{\n    \"name\": \"pineapple\",\n    \"id\": 0\n}"
+                },
+                "4" : {
+                  "value" : "{\n    \"id\": 1\n}"
                 }
               }
             }
@@ -49,17 +93,113 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/inline_response_200"
+                  "$ref" : "#/components/schemas/body"
                 },
                 "examples" : {
                   "0" : {
-                    "value" : "{\"name\":\"apple\",\"id\":1,\"category\":\"food\"}"
+                    "value" : "{\"name\":\"mango\",\"id\":0,\"category\":\"fruits\"}"
                   },
                   "1" : {
-                    "value" : "{\"name\":\"pineapple\",\"id\":1,\"category\":\"food\"}"
+                    "value" : "{\"name\":\"pineapple\",\"id\":0,\"category\":\"fruits\"}"
                   },
                   "2" : {
-                    "value" : "{\"name\":\"pineapple\",\"id\":1,\"category\":\"fruits\"}"
+                    "value" : "{\"name\":\"pineapple\",\"id\":0,\"category\":\"fruits\"}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:8080"
+        } ]
+      },
+      "post" : {
+        "tags" : [ "Shop" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzE5OTgsImVtYWlsIjoic29uaWFAbWFpbC5ydSJ9.lDC9Oj37nN9U4G6CZvvj4zN3FiBfy5McvbNOVaJ8NM0"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/body_1"
+              },
+              "examples" : {
+                "0" : {
+                  "value" : "{\n    \"name\": \"mango\",\n    \"category\": \"food\"\n}"
+                },
+                "1" : {
+                  "value" : "{\n    \"id\": 0,\n    \"category\": \"fruits\"\n}"
+                },
+                "2" : {
+                  "value" : "{\n    \"name\": \"pineapple\",\n    \"id\": 0,\n    \"category\": \"fruits\"\n}"
+                },
+                "3" : {
+                  "value" : "{\n    \"name\": \"pineapple\",\n    \"id\": 0\n}"
+                },
+                "4" : {
+                  "value" : "{\n    \"id\": 1\n}"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/body_1"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"name\":\"mango\",\"id\":1,\"category\":\"food\"}"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:8080"
+        } ]
+      },
+      "delete" : {
+        "tags" : [ "Shop" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzIzNjIsImVtYWlsIjoiIn0.RS8q9T3plTadwWBc78RP43pI6rNY8lcKoAfw45f8w50"
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/body_1"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"name\":\"mango\",\"id\":1,\"category\":\"food\"}"
                   }
                 }
               }
@@ -74,11 +214,238 @@
         "url" : "http://localhost:8080"
       } ]
     },
-    "/product" : {
-      "get" : {
+    "/refresh" : {
+      "put" : {
+        "tags" : [ "Auth" ],
         "description" : "Auto generated using Swagger Inspector",
         "parameters" : [ {
-          "name" : "id",
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzIzNjIsImVtYWlsIjoiIn0.RS8q9T3plTadwWBc78RP43pI6rNY8lcKoAfw45f8w50"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/body_2"
+              },
+              "examples" : {
+                "0" : {
+                  "value" : "{\n    \"refresh_token\": \"bde5622d4b18810357da0cf08d094eae9dbfae9b\"\n}"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/inline_response_200_1"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzI2NzksImVtYWlsIjoiIn0.LXkIt8mUioubQkpN2IQ0TYQnlSREmldT269xrD2kHk0\",\"refresh_token\":\"396bbad10ea4e218f968ef800dddbf09e697b9c1\"}\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:3687"
+        } ]
+      },
+      "servers" : [ {
+        "url" : "http://localhost:3687"
+      } ]
+    },
+    "/signin" : {
+      "post" : {
+        "tags" : [ "Auth" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzIzNjIsImVtYWlsIjoiIn0.RS8q9T3plTadwWBc78RP43pI6rNY8lcKoAfw45f8w50"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/body_3"
+              },
+              "examples" : {
+                "0" : {
+                  "value" : "{\n    \"email\": \"example@mail.ru\",\n    \"password\": \"testpassword\"\n}"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/inline_response_200_1"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"access_token\":\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzI1NDYsImVtYWlsIjoiZXhhbXBsZUBtYWlsLnJ1In0.IMUbCteKYjqRQ-xHTxWv7EcFaca6fGfEd2TA0ZVgt7o\",\"refresh_token\":\"5e008d8541a577adc478ddecdc4822ed3faed8c6\"}\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:3687"
+        } ]
+      },
+      "servers" : [ {
+        "url" : "http://localhost:3687"
+      } ]
+    },
+    "/validate" : {
+      "post" : {
+        "tags" : [ "Auth" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzIzNjIsImVtYWlsIjoiIn0.RS8q9T3plTadwWBc78RP43pI6rNY8lcKoAfw45f8w50"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/body_4"
+              },
+              "examples" : {
+                "0" : {
+                  "value" : "{\n    \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzI1NDYsImVtYWlsIjoiZXhhbXBsZUBtYWlsLnJ1In0.IMUbCteKYjqRQ-xHTxWv7EcFaca6fGfEd2TA0ZVgt7o\"\n}"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/inline_response_200_2"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"message\":\"Access token is valid\"}\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:3687"
+        } ]
+      },
+      "servers" : [ {
+        "url" : "http://localhost:3687"
+      } ]
+    },
+    "/signup" : {
+      "post" : {
+        "tags" : [ "Auth" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "AccessToken",
+          "in" : "header",
+          "required" : false,
+          "style" : "simple",
+          "explode" : false,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE1ODQ4MzIzNjIsImVtYWlsIjoiIn0.RS8q9T3plTadwWBc78RP43pI6rNY8lcKoAfw45f8w50"
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/body_5"
+              },
+              "examples" : {
+                "0" : {
+                  "value" : "{\n    \"email\": \"example@mail.ru\",\n    \"password\": \"testpassword\"\n}"
+                }
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "Auto generated using Swagger Inspector",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/inline_response_200_2"
+                },
+                "examples" : {
+                  "0" : {
+                    "value" : "{\"message\":\"Welcome, example@mail.ru!\\n\"}\n"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "servers" : [ {
+          "url" : "http://localhost:3687"
+        } ]
+      },
+      "servers" : [ {
+        "url" : "http://localhost:3687"
+      } ]
+    },
+    "/" : {
+      "get" : {
+        "tags" : [ "Shop" ],
+        "description" : "Auto generated using Swagger Inspector",
+        "parameters" : [ {
+          "name" : "count",
+          "in" : "query",
+          "required" : false,
+          "style" : "form",
+          "explode" : true,
+          "schema" : {
+            "type" : "string"
+          },
+          "example" : "1"
+        }, {
+          "name" : "page",
           "in" : "query",
           "required" : false,
           "style" : "form",
@@ -94,121 +461,14 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/inline_response_200"
+                  "$ref" : "#/components/schemas/inline_response_200_3"
                 },
                 "examples" : {
                   "0" : {
-                    "value" : "{\"name\":\"meet\",\"id\":1,\"category\":\"food\"}"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "servers" : [ {
-          "url" : "http://localhost:8080"
-        } ]
-      },
-      "servers" : [ {
-        "url" : "http://localhost:8080"
-      } ]
-    },
-    "/delete_product" : {
-      "delete" : {
-        "description" : "Auto generated using Swagger Inspector",
-        "parameters" : [ {
-          "name" : "id",
-          "in" : "query",
-          "required" : false,
-          "style" : "form",
-          "explode" : true,
-          "schema" : {
-            "type" : "string"
-          },
-          "example" : "8"
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "Auto generated using Swagger Inspector",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/inline_response_200"
-                },
-                "examples" : {
-                  "0" : {
-                    "value" : "{\"name\":\"banana\",\"id\":8,\"category\":\"food\"}"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "servers" : [ {
-          "url" : "http://localhost:8080"
-        } ]
-      },
-      "servers" : [ {
-        "url" : "http://localhost:8080"
-      } ]
-    },
-    "/add_product" : {
-      "post" : {
-        "description" : "Auto generated using Swagger Inspector",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/body_1"
-              },
-              "examples" : {
-                "0" : {
-                  "value" : "{\n    \"name\": \"mango\",\n    \"category\": \"food\"\n}"
-                }
-              }
-            }
-          }
-        },
-        "responses" : {
-          "200" : {
-            "description" : "Auto generated using Swagger Inspector",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/inline_response_200"
-                },
-                "examples" : {
-                  "0" : {
-                    "value" : "{\"name\":\"mango\",\"id\":9,\"category\":\"food\"}"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "servers" : [ {
-          "url" : "http://localhost:8080"
-        } ]
-      },
-      "servers" : [ {
-        "url" : "http://localhost:8080"
-      } ]
-    },
-    "/" : {
-      "get" : {
-        "description" : "Auto generated using Swagger Inspector",
-        "responses" : {
-          "200" : {
-            "description" : "Auto generated using Swagger Inspector",
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object",
-                  "properties" : { }
-                },
-                "examples" : {
-                  "0" : {
-                    "value" : "[{\"name\":\"meet\",\"id\":1,\"category\":\"food\"},{\"name\":\"pineapple\",\"id\":2,\"category\":\"food\"},{\"name\":\"candy\",\"id\":3,\"category\":\"food\"}]"
+                    "value" : "{\"items\":[{\"name\":\"mango\",\"id\":0,\"category\":\"food\"},{\"name\":\"mango\",\"id\":1,\"category\":\"food\"}],\"pages_count\":1,\"page\":1}"
+                  },
+                  "1" : {
+                    "value" : "{\"items\":[{\"name\":\"mango\",\"id\":0,\"category\":\"food\"}],\"pages_count\":2,\"page\":1}"
                   }
                 }
               }
@@ -226,18 +486,21 @@
   },
   "components" : {
     "schemas" : {
-      "body" : {
+      "inline_response_200" : {
         "type" : "object",
         "properties" : {
           "name" : {
             "type" : "string"
+          },
+          "id" : {
+            "type" : "integer"
           },
           "category" : {
             "type" : "string"
           }
         }
       },
-      "inline_response_200" : {
+      "body" : {
         "type" : "object",
         "properties" : {
           "name" : {
@@ -257,8 +520,96 @@
           "name" : {
             "type" : "string"
           },
+          "id" : {
+            "type" : "integer"
+          },
           "category" : {
             "type" : "string"
+          }
+        }
+      },
+      "body_2" : {
+        "type" : "object",
+        "properties" : {
+          "refresh_token" : {
+            "type" : "string"
+          }
+        }
+      },
+      "inline_response_200_1" : {
+        "type" : "object",
+        "properties" : {
+          "access_token" : {
+            "type" : "string"
+          },
+          "refresh_token" : {
+            "type" : "string"
+          }
+        }
+      },
+      "body_3" : {
+        "type" : "object",
+        "properties" : {
+          "password" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          }
+        }
+      },
+      "body_4" : {
+        "type" : "object",
+        "properties" : {
+          "access_token" : {
+            "type" : "string"
+          }
+        }
+      },
+      "inline_response_200_2" : {
+        "type" : "object",
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          }
+        }
+      },
+      "body_5" : {
+        "type" : "object",
+        "properties" : {
+          "password" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          }
+        }
+      },
+      "inline_response_200_3" : {
+        "type" : "object",
+        "properties" : {
+          "pages_count" : {
+            "type" : "integer"
+          },
+          "page" : {
+            "type" : "integer"
+          },
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "type" : "object",
+              "properties" : {
+                "name" : {
+                  "type" : "string"
+                },
+                "id" : {
+                  "type" : "integer"
+                },
+                "category" : {
+                  "type" : "string"
+                }
+              }
+            }
           }
         }
       }
