@@ -1,0 +1,16 @@
+version: '2'
+
+services:
+  web:
+    build: .
+    image: books:latest
+    ports:
+      - "8080:8080"
+    command: /app/main
+    depends_on:
+      - tarantool
+  tarantool:
+    build: db/.
+    image: tarantool/tarantool:2.2.1
+    ports:
+      - "8888:3301"
