@@ -17,3 +17,9 @@ func (product *Product) SetId(id int) {
 func (product *Product) SetCategory(category string) {
     product.Category = category
 }
+
+type AllItems struct {
+    Items       []Product `json:"items"`
+    PagesCount  int       `json:"pages_count"`
+    CurrentPage int       `json:"page"`
+}

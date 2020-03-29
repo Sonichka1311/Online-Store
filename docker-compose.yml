@@ -1,16 +1,35 @@
 version: '2'
 
 services:
-  web:
+  shared-build:
     build: .
-    image: books:latest
+    image: shared-image:latest
+  auth:
+    build: auth
+    image: auth:latest
     ports:
-      - "8080:8080"
-    command: /app/main
+      - "3687:3687"
+    command: /auth/main
     depends_on:
       - tarantool
+    networks:
+      - all
+  server:
+    build: http
+    image: server:latest
+    ports:
+      - "8080:8080"
+    command: /http/main
+    depends_on:
+      - tarantool
+    networks:
+      - all
   tarantool:
-    build: db/.
+    build: db
     image: tarantool/tarantool:2.2.1
     ports:
-      - "8888:3301"
+      - "3301:3301"
+    networks:
+      - all
+networks:
+  all:
