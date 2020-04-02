@@ -2,30 +2,24 @@ version: '2'
 
 services:
   shared-build:
-    build: .
+    build: pkg/
     image: shared-image:latest
   auth:
-    build: auth
-    image: auth:latest
+    build: cmd/auth/
     ports:
       - "3687:3687"
     command: /auth/main
-    depends_on:
-      - tarantool
     networks:
       - all
   server:
-    build: http
-    image: server:latest
+    build: cmd/http/
     ports:
       - "8080:8080"
     command: /http/main
-    depends_on:
-      - tarantool
     networks:
       - all
   tarantool:
-    build: db
+    build: db/
     image: tarantool/tarantool:2.2.1
     ports:
       - "3301:3301"
