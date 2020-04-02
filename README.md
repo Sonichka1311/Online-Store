@@ -24,5 +24,5 @@ Swagger схему можно посмотреть на http://127.0.0.1:8080/sw
 
 ```
 cd DistributedSystemsProject
-docker-compose build && docker-compose up
+docker-compose up
 ```
