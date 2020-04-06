@@ -40,7 +40,7 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/signup", handler.SignUp)
-	router.HandleFunc("/{token}", handler.SignUp).Methods(http.MethodGet)
+	router.HandleFunc("/{token}", handler.ConfirmRegister).Methods(http.MethodGet)
 	router.HandleFunc("/signin", handler.SignIn)
 	router.HandleFunc("/validate", handler.ValidateToken)
 	router.HandleFunc("/refresh", handler.RefreshToken)

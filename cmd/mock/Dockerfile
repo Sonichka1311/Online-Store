@@ -1,8 +1,8 @@
 FROM shared-image:latest
 
-RUN mkdir auth
-COPY . auth
-WORKDIR auth
+RUN mkdir mock
+COPY . mock
+WORKDIR mock
 RUN go build -mod=vendor -o main .
 
 CMD ["./main"]

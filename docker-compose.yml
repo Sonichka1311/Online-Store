@@ -2,27 +2,50 @@ version: '2'
 
 services:
   shared-build:
-    build: pkg/
+    build: .
     image: shared-image:latest
+
   auth:
     build: cmd/auth/
     ports:
-      - "3687:3687"
-    command: /auth/main
+      - 3687:3687
     networks:
       - all
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - 5672:5672
+    networks:
+      - all
+
+  mock:
+    build: cmd/mock
+    ports:
+      - 25:25
+    networks:
+      - all
+
+  notifications:
+    build: cmd/notifications
+    networks:
+      - all
+    depends_on:
+      - rabbitmq
+
   server:
     build: cmd/http/
     ports:
-      - "8080:8080"
-    command: /http/main
+      - 8080:8080
     networks:
       - all
   tarantool:
     build: db/
     image: tarantool/tarantool:2.2.1
     ports:
-      - "3301:3301"
+      - 3301:3301
     networks:
       - all
 networks:

@@ -17,7 +17,7 @@ const (
 	QueueConnectionRetries = 10
 	QueueConnectionSleepTime = time.Second * 5
 	QueueServer = "amqp://guest:guest@rabbitmq:5672/"
-	SmtpServer = "" // TODO
+	SmtpServer = "mock"
 	TestUser = "test@mock"
 	TestPassword = "1234"
 	MockPort = 25
