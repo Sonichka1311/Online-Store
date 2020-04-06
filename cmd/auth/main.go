@@ -8,6 +8,7 @@ import (
 	"shop/pkg/handlers"
 	"shop/pkg/logic"
 	"shop/pkg/models"
+	"shop/pkg/sessions"
 	"shop/pkg/user"
 	"strconv"
 	"sync"
@@ -19,10 +20,21 @@ func main() {
 		Mutex:  sync.Mutex{},
 	}
 
+	notificationHandler := &handlers.NotificationHandler{}
+	notificationError := notificationHandler.Init()
+	if notificationError != nil {
+		log.Println("Failed to connect to notification queue")
+		return
+	}
+
 	handler := handlers.AuthHandler{
 		Repo:   &user.Repo{
 			Connector:  &databaseConnector,
 		},
+		Sessions: &sessions.Repo{
+			Connector:	&databaseConnector,
+		},
+		Notifications: notificationHandler,
 	}
 
 	router := mux.NewRouter()

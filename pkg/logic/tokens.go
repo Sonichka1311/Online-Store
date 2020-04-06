@@ -13,7 +13,7 @@ func CreateAccessToken(email string) (string, error) {
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": models.Email{Email: email},
 		"iat":  time.Now().Unix(),
-		"exp":  time.Now().Add(time.Hour * 24).Unix(),
+		"exp":  time.Now().Add(constants.AccessTokenExpireTime).Unix(),
 	})
 
 	return accessToken.SignedString([]byte(constants.SigningToken))

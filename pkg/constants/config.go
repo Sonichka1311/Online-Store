@@ -7,7 +7,6 @@ const (
 	RefreshTokenExpireTime = time.Hour
 	ConfirmationTokenExpireTime = time.Minute * 10
 	SigningToken = "2816e66cb08c9f4cb5d7c080b2fca85f17cdb1cbe32380c7fdde9cf469185e30"
-	RefreshTokenLength = 20
 	Protocol = "http"
 	MainHost = "localhost"
 	DatabaseHost = "tarantool"
@@ -18,4 +17,8 @@ const (
 	QueueConnectionRetries = 10
 	QueueConnectionSleepTime = time.Second * 5
 	QueueServer = "amqp://guest:guest@rabbitmq:5672/"
+	SmtpServer = "" // TODO
+	TestUser = "test@mock"
+	TestPassword = "1234"
+	MockPort = 3031
 )

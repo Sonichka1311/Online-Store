@@ -1,5 +1,7 @@
 package models
 
+import "log"
+
 type Error struct {
 	ErrorCode 	int 	`json:"code"`
 	ErrorString string	`json:"message"`
@@ -21,6 +23,7 @@ type ErrorChecker struct {
 }
 
 func (checker *ErrorChecker) ReplyError() {
+	log.Printf("Replying user with error: %s\n", checker.Error.ErrorString)
 	(*checker.Replier).ReplyWithError(checker.Error)
 	checker.Error = nil
 }

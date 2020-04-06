@@ -47,6 +47,22 @@ func (h *NotificationHandler) Init() error {
 	return nil
 }
 
+func (h *NotificationHandler) InitQueue() (<-chan amqp.Delivery, error) {
+	queue, declareError := h.Channel.QueueDeclare("emails", false, false, false, false, nil)
+	if declareError != nil {
+		log.Printf("Failed to create queue: %s", declareError)
+		return nil, declareError
+	}
+
+	bindError := h.Channel.QueueBind(queue.Name, "#", "notifications", false, nil)
+	if bindError != nil {
+		log.Printf("Failed to bind queue: %s", bindError)
+		return nil, bindError
+	}
+
+	return h.Channel.Consume(queue.Name, "", false, false, false, false, nil)
+}
+
 func (h *NotificationHandler) Close() {
 	_ = h.Channel.Close()
 	_ = h.Connector.Close()
@@ -77,4 +93,3 @@ func (h *NotificationHandler) SendConfirmationRequest(userData *user.User, token
 	}
 	return nil
 }
-
