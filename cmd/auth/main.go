@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"shop/pkg/constants"
@@ -24,12 +25,15 @@ func main() {
 		},
 	}
 
-	http.HandleFunc("/signup", handler.SignUp)
-	http.HandleFunc("/signin", handler.SignIn)
-	http.HandleFunc("/validate", handler.ValidateToken)
-	http.HandleFunc("/refresh", handler.RefreshToken)
+	router := mux.NewRouter()
 
-	err := http.ListenAndServe(":" + strconv.Itoa(constants.AuthPort), nil)
+	router.HandleFunc("/signup", handler.SignUp)
+	router.HandleFunc("/{token}", handler.SignUp).Methods(http.MethodGet)
+	router.HandleFunc("/signin", handler.SignIn)
+	router.HandleFunc("/validate", handler.ValidateToken)
+	router.HandleFunc("/refresh", handler.RefreshToken)
+
+	err := http.ListenAndServe(":" + strconv.Itoa(constants.AuthPort), router)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
 	}

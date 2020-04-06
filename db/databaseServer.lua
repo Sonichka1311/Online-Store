@@ -20,7 +20,8 @@ box.once(
         box.space.products:format({
             { name = 'id', type = 'integer' },
             { name = 'name', type = 'string' },
-            { name = 'category', type = 'string'},
+            { name = 'category', type = 'string' },
+            { name = 'confirm', type = 'boolean' },
         })
         box.space.products:create_index(
             'primary',
@@ -63,6 +64,27 @@ box.once(
                 parts = {'refresh_token'}
             }
         )
+
+        box.schema.space.create('confirmation')
+        box.space.confirmation:format({
+            { name = 'email', type = 'string' },
+            { name = 'token', type = 'string' },
+            { name = 'expire', type = 'string' }
+        })
+        box.space.confirmation:create_index(
+            'primary',
+            {
+                type = 'hash',
+                parts = {'email'}
+            }
+        )
+        box.space.confirmation:create_index(
+            'token',
+            {
+                type = 'hash',
+                parts = {'token'}
+            }
+        )
     end)
 
 -- additional functions ------------------------------------------------------------------------------------------------
@@ -82,8 +104,6 @@ end
 
 -- products handlers ---------------------------------------------------------------------------------------------------
 local function get_products(req)
-    local method = req.method
-    log.info('Method: '..method)
     local all_products = fun.totable(box.space.products:pairs())
     return { status = 200, body = json.encode(all_products) }
 end
@@ -91,7 +111,6 @@ end
 local function get_product(req)
     local method = req.method
     log.info('Method: '..method)
-    --local id = req.
     local id = tonumber(keyGen(req.path))
     local exists = box.space.products:count(id)
     if exists > 0 then
@@ -103,8 +122,6 @@ local function get_product(req)
 end
 
 local function add_product(req)
-    local method = req.method
-    log.info('Method: '..method)
     local id = 0
     local all_products = fun.totable(box.space.products:pairs())
     if #all_products > 0 then
@@ -136,8 +153,6 @@ local function add_product(req)
 end
 
 local function edit_product(req)
-    local method = req.method
-    log.info('Method: '..method)
     local id = tonumber(req:json().id)
     local name = req:json().name
     local category = req:json().category
@@ -178,8 +193,6 @@ local function edit_product(req)
 end
 
 local function delete_product(req)
-    local method = req.method
-    log.info('Method: '..method)
     local id = tonumber(req:json().id)
     local exists = box.space.products:count(id)
     -- update value if product exists, return status 404 if not
@@ -202,8 +215,6 @@ end
 
 -- users handlers ------------------------------------------------------------------------------------------------------
 local function add_user(req)
-    local method = req.method
-    log.info('Method: '..method)
     local email = req:json().email
     local password = req:json().password
     if email == nil or password == nil then
@@ -213,43 +224,68 @@ local function add_user(req)
     local exists = box.space.users:count(email)
     -- return code 409 if key already exists, insert if not
     if exists > 0 then
+        local user = box.space.users:get(email)
+        if user.confirm == false then
+            return { status = 200 }
+        end
         log.info('Status: 409, Message: User already exists in database')
         return { status = 409 }
     else
-        box.space.users:insert{email, password}
+        box.space.users:insert{email, password, false}
         log.info('Status: 200')
         log.info('Inserted: { email: '..email..', password: '..password)
         return { status = 200 }
     end
 end
 
+local function get_user(req)
+    local email = keyGen(req.path)
+    local exists = box.space.users:count(email)
+    if exists > 0 then
+        local user = box.space.users:get(email)
+        return { status = 200, body = json.encode({password = user.password})}
+    else
+        log.info('Status: 404, Message: There is no user '..email..' in database')
+        return { status = 404 }
+    end
+end
+
+local function confirm_user(req)
+    local email = req:json().email
+    if email == nil then
+        log.info('Status: 400, Message: Body isn\'t correct')
+        return { status = 400 }
+    end
+    local exists = box.space.users:count(email)
+    if exists > 0 then
+        box.space.users:put{email, password, true}
+        log.info('Status: 200')
+        log.info('Inserted: { email: '..email..', password: '..password)
+        return { status = 200 }
+    else
+        log.info('Status: 404, Message: No user in database')
+        return { status = 404 }
+    end
+end
+
 -- sessions handlers ---------------------------------------------------------------------------------------------------
 local function add_session(req)
-    local method = req.method
-    log.info('Method: '..method)
     local email = req:json().email
-    local password = req:json().password
     local refresh_token = req:json().refresh_token
     local expire = req:json().expire
     local exists = box.space.users:count(email)
     if exists > 0 then
-        local user = box.space.users:get(email)
-        if user.password == password then
-            local session_exists = box.space.sessions:count(email)
-            if session_exists > 0 then
-                box.space.sessions:put{email, refresh_token, expire}
-                log.info('Status: 200')
-                log.info('Updated: { email: '..email..', refresh_token: '..refresh_token..", expire: "..expire..' }')
-                return { status = 200 }
-            else
-                box.space.sessions:insert{email, refresh_token, expire}
-                log.info('Status: 200')
-                log.info('Inserted: { email: '..email..', refresh_token: '..refresh_token..", expire: "..expire..' }')
-                return { status = 200 }
-            end
+        local session_exists = box.space.sessions:count(email)
+        if session_exists > 0 then
+            box.space.sessions:put{email, refresh_token, expire}
+            log.info('Status: 200')
+            log.info('Updated: { email: '..email..', refresh_token: '..refresh_token..", expire: "..expire..' }')
+            return { status = 200 }
         else
-            log.info('Status: 400, Message: Bad password '..password..' for user '..email)
-            return { status = 400 }
+            box.space.sessions:insert{email, refresh_token, expire}
+            log.info('Status: 200')
+            log.info('Inserted: { email: '..email..', refresh_token: '..refresh_token..", expire: "..expire..' }')
+            return { status = 200 }
         end
     else
         log.info('Status: 404, Message: There is no user '..email..' in database')
@@ -257,28 +293,70 @@ local function add_session(req)
     end
 end
 
-local function refresh_session(req)
-    local method = req.method
-    log.info('Method: '..method)
-    local old_refresh_token = req:json().old_refresh_token
+local function get_session(req)
     local refresh_token = req:json().refresh_token
-    local expire = req:json().expire
-    local now = req:json().time
-    local exists = box.space.sessions.index.token:count(old_refresh_token)
+    local exists = box.space.sessions.index.token:count(refresh_token)
     if exists > 0 then
-        local session = box.space.sessions.index.token:get(old_refresh_token)
-        if session.expire > now then
-            box.space.sessions:put{session.email, refresh_token, expire }
-            log.info('Status: 200')
-            log.info('Updated: { email: '..session.email..', refresh_token: '..refresh_token..", expire: "..expire..' }')
-            local user = box.space.users:get(session.email)
-            return { status = 200, body = json.encode({email = user.email, password = user.password}) }
-        else
-            log.info('Status: 403, Message: Expired refresh_token')
-            return { status = 403 }
-        end
+        local session = box.space.sessions.index.token:get(refresh_token)
+        return { status = 200, body = json.encode({email = session.email, expire = session.expire}) }
     else
-        log.info('Status: 404, Message: Invavid refresh_token')
+        log.info('Status: 404, Message: Invalid refresh_token')
+        return { status = 404 }
+    end
+end
+
+local function delete_session(req)
+    local refresh_token = req:json().refresh_token
+    local email = req:json().email
+    local exists = box.space.sessions:count(email)
+    if exists > 0 then
+        local session = box.space.sessions:get(email)
+        if session.refresh_token == refresh_token then
+            log.info('Delete session for user '..email)
+            box.space.sessions.index.token:delete(refresh_token)
+        end
+    end
+end
+
+-- confirmation handlers ----------------------------------------------------------------------------------------------
+local function add_confirmation(req)
+    local email = req:json().email
+    local token = req:json().token
+    local expire = req:json().expire
+    local exists = box.space.confirmation.index.token:count(token)
+    if exists > 0 then
+        log.info('Status: 409, Message: Token already exists')
+        return { status = 409 }
+    else
+        box.space.confirmation:insert{email, token, expire}
+        log.info('Status: 200')
+        log.info('Inserted: { email: '..email..', token: '..token..', expire: '..expire..' }')
+        return { status = 200 }
+    end
+end
+
+local function get_confirmation(req)
+    local token = keyGen(req.path)
+    local exists = box.space.confirmation.index.token:count(token)
+    if exists > 0 then
+        local confirmation = box.space.confirmation.index.token:get(token)
+        log.info('Status: 200')
+        return { status = 200, body = json.encode({email = confirmation.email, expire = confirmation.expire}) }
+    else
+        log.info('Status: 404, Message: No token')
+        return { status = 404 }
+    end
+end
+
+local function confirm(req)
+    local email = req:json().email
+    local exists = box.space.confirmation:count(email)
+    if exists > 0 then
+        log.info('Status: 200')
+        box.space.confirmation:delete(email)
+        return { status = 200 }
+    else
+        log.info('Status: 404, Message: No user')
         return { status = 404 }
     end
 end
@@ -295,9 +373,16 @@ server:route({ path = '/product', method = 'DELETE' }, delete_product) -- for de
 server:route({ path = '/delete_all'}, delete_all) -- not business logic, delete all from products database
 ----------------------------
 server:route({ path = '/user', method = 'POST' }, add_user) -- for add new user
+server:route({ path = '/user/:email', method = 'GET' }, get_user) -- for get user
+server:route({ path = '/user', method = 'PUT' }, confirm_user) -- for confirm user
 ----------------------------
-server:route({ path = '/session', method = 'POST' }, add_session) -- for add new session
-server:route({ path = '/session', method = 'PUT' }, refresh_session) -- for refresh session
+server:route({ path = '/session', method = 'POST' }, add_session) -- for add new or update session
+server:route({ path = '/session/:token', method = 'GET' }, get_session) -- for get session
+server:route({ path = '/session', method = 'DELETE' }, delete_session) -- for get session
+----------------------------
+server:route({ path = '/confirmation', method = 'POST' }, add_confirmation) -- for add confirmation request
+server:route({ path = '/confirmation/:token', method = 'GET' }, get_confirmation) -- for get confirmation request
+server:route({ path = '/confirmation', method = 'DELETE'}, confirm) -- for delete confirmation request
 ----------------------------
 
 server:start()

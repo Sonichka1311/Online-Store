@@ -1,5 +1,20 @@
 package models
 
+type Error struct {
+	ErrorCode 	int 	`json:"code"`
+	ErrorString string	`json:"message"`
+}
+
+func NewError(err error, code int) (*Error, bool) {
+	if err != nil {
+		return &Error{
+			ErrorCode: code,
+			ErrorString: err.Error(),
+		}, true
+	}
+	return nil, false
+}
+
 type ErrorChecker struct {
 	Error 	*Error
 	Replier *Replier
@@ -11,8 +26,8 @@ func (checker *ErrorChecker) ReplyError() {
 }
 
 func (checker *ErrorChecker) CheckCustomError(err error, code int) bool {
-	if err != nil {
-		checker.Error = &Error{ErrorString: err.Error(), ErrorCode: code}
+	if newError, ok := NewError(err, code); ok {
+		checker.Error = newError
 		checker.ReplyError()
 		return true
 	}
