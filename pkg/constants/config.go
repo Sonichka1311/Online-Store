@@ -20,5 +20,5 @@ const (
 	SmtpServer = "" // TODO
 	TestUser = "test@mock"
 	TestPassword = "1234"
-	MockPort = 3031
+	MockPort = 25
 )
