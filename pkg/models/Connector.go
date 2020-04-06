@@ -1,6 +1,7 @@
 package models
 
 import (
+	"log"
 	"net/http"
 	"sync"
 )
@@ -48,11 +49,13 @@ func (connector Connector) Request(handler string, requestType string, data *[]b
 		response, requestError = connector.Router.Delete("/" + handler, *data)
 	}
 	if requestError != nil {
+		log.Printf("Error from database: %s", requestError.Error())
 		return response, &Error{
 			ErrorString: requestError.Error(),
 			ErrorCode: http.StatusInternalServerError}
 	}
 	if response.StatusCode != http.StatusOK {
+		log.Printf("Error from database: %s", response.Status)
 		return response, &Error{
 			ErrorString: response.Status,
 			ErrorCode: response.StatusCode}

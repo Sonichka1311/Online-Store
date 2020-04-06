@@ -3,6 +3,7 @@ package logic
 import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/google/uuid"
+	"log"
 	"shop/pkg/constants"
 	"shop/pkg/models"
 	"time"
@@ -21,6 +22,7 @@ func CreateAccessToken(email string) (string, error) {
 func CreateRefreshToken() (*string, error) {
 	uuidToken, uuidError := uuid.NewRandom()
 	if uuidError != nil {
+		log.Println("Fail to generate refresh token")
 		return nil, uuidError
 	}
 	token := uuidToken.String()
@@ -31,6 +33,7 @@ func CreateRefreshToken() (*string, error) {
 func CreateConfirmationToken() (*string, error) {
 	uuidToken, uuidError := uuid.NewRandom()
 	if uuidError != nil {
+		log.Println("Fail to generate confirmation token")
 		return nil, uuidError
 	}
 	token := uuidToken.String()

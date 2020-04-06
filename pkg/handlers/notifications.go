@@ -52,7 +52,8 @@ func (h *NotificationHandler) Close() {
 	_ = h.Connector.Close()
 }
 
-func (h *NotificationHandler) SendRequest(userData *user.User, token string) error {
+func (h *NotificationHandler) SendConfirmationRequest(userData *user.User, token string) error {
+	log.Printf("Trying to send confirmation request for user %s", userData.Email)
 	notification := models.EmailNotification{Email: userData.Email, Message: constants.ConfirmationMessage(token)}
 	jsonNotification, jsonError := json.Marshal(notification)
 	if jsonError != nil {
