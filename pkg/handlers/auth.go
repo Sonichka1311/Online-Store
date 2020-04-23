@@ -13,7 +13,6 @@ import (
 	"shop/pkg/models"
 	"shop/pkg/sessions"
 	"shop/pkg/user"
-	"strconv"
 	"time"
 )
 
@@ -37,15 +36,9 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Trying to register email %s\n", usr.Email)
 
 	// add new user to db
-	_, requestError := h.Repo.AddUser(usr)
-	if requestError != nil {
-		switch requestError.ErrorCode {
-		case http.StatusConflict:
-			checker.CheckCustomError(replier.ReplyWithMessage(constants.UserAlreadyExists), http.StatusInternalServerError)
-			return
-		default:
-			checker.CheckError(requestError)
-		}
+	requestError := h.Repo.AddUser(usr)
+	if checker.CheckError(requestError) {
+		return
 	}
 
 	// generate token to verify account
@@ -67,16 +60,15 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Make confirmation request %s for user %s\n", *confirmationToken, usr.Email)
 
 	// add confirmation to db
-	_, addConfirmationError := h.Repo.AddConfirmation(&confirmation)
+	addConfirmationError := h.Repo.AddConfirmation(&confirmation)
 	if checker.CheckError(addConfirmationError) {
 		return
 	}
 
 	// delete confirmation from db when token expired
 	go func() {
-		time.Sleep(constants.ConfirmationTokenExpireTime)
-		resp, _ := h.Repo.DeleteConfirmation(&confirmation)
-		if resp.StatusCode == http.StatusOK {
+		time.Sleep(2 * constants.ConfirmationTokenExpireTime)
+		if ok := h.Repo.DeleteConfirmation(&confirmation); ok {
 			log.Printf("Delete confirmation %s as it has been expired\n", confirmation.Token)
 		}
 	}()
@@ -98,38 +90,25 @@ func (h *AuthHandler) ConfirmRegister(w http.ResponseWriter, r *http.Request) {
 	checker := models.ErrorChecker{Replier: &replier}
 
 	// get confirmation token from url
-	token := mux.Vars(r)["token"]
-	log.Printf("Trying to confirm user by token %s\n", token)
+	var confirmation auth.Confirmation
+	confirmation.Token = mux.Vars(r)["token"]
+	log.Printf("Trying to confirm user by token %s\n", confirmation.Token)
 
 	// get confirmation from db by token
-	confirmationData, confirmationError := h.Repo.GetConfirmation(token)
+	confirmationError := h.Repo.GetConfirmation(&confirmation)
 	if checker.CheckError(confirmationError) {
 		return
 	}
 
-	// parse confirmation from db response
-	var confirmation auth.Confirmation
-	jsonError := confirmation.GetConfirmation(confirmationData.Body)
-	if checker.CheckError(jsonError) {
-		log.Printf("Bad response from database for confirmation token %s\n", token)
-		return
-	}
-
 	// check if token has not been expired
-	if expire, expireErr := strconv.Atoi(confirmation.Expire); expireErr != nil {
-		if expire < int(time.Now().Unix()) {
-			log.Printf("Token %s has been expired\n", token)
-			checker.NewError(constants.ExpiredConfirmation, http.StatusBadRequest)
-		}
-	} else {
-		log.Println("Failed to convert time into integer")
-		checker.CheckCustomError(expireErr, http.StatusInternalServerError)
+	if confirmation.Expire < time.Now().Unix() {
+		log.Printf("Token %s has been expired\n", confirmation.Token)
+		checker.NewError(constants.ExpiredConfirmation, http.StatusBadRequest)
 		return
 	}
 
 	// confirm user in db
-	usr := user.User{Email: confirmation.Email}
-	_, confirmError := h.Repo.ConfirmUser(&usr)
+	confirmError := h.Repo.ConfirmUser(&confirmation)
 	if checker.CheckError(confirmError) {
 		return
 	}
@@ -137,7 +116,8 @@ func (h *AuthHandler) ConfirmRegister(w http.ResponseWriter, r *http.Request) {
 	// delete confirmation in db as account has been verified
 	go func() {
 		h.Repo.DeleteConfirmation(&confirmation)
-		log.Printf("Confirmation with token %s has been deleted\n", token)
+		log.Printf("Confirmation with token %s has been deleted\n", confirmation.Token)
+		return
 	}()
 
 	log.Printf("User %s has been verified\n", confirmation.Email)
@@ -163,21 +143,11 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Trying to sign in for user %s\n", usr.Email)
 
 	// get user by email from db to check confirmation
-	jsonUserData, jsonUserDataError := h.Repo.GetUser(usr)
-	if jsonUserData.StatusCode == http.StatusNotFound {
-		log.Printf("User %s doesn't exist\n", usr.Email)
-		checker.NewError(constants.InvalidUser, http.StatusBadRequest)
-		return
-	}
-	if checker.CheckError(jsonUserDataError) {
+	getError := h.Repo.GetUser(usr)
+	if checker.CheckError(getError) {
 		return
 	}
 
-	// parse db response
-	if checker.CheckError(usr.GetUser(jsonUserData.Body)) {
-
-		return
-	}
 	// check if password is valid and user is verified
 	if usr.Password != usr.Password {
 		log.Printf("User %s send invalid password\n", usr.Email)
@@ -202,15 +172,15 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Creating session for user %s\n", usr.Email)
 
 	// add session to db
-	_, requestError := h.Sessions.AddOrUpdate(&session)
+	requestError := h.Sessions.Add(&session)
 	if checker.CheckError(requestError) {
 		return
 	}
+
 	// delete session when it expired
 	go func() {
-		time.Sleep(constants.RefreshTokenExpireTime)
-		resp, _ := h.Sessions.Delete(&session)
-		if resp.StatusCode == http.StatusOK {
+		time.Sleep(2 * constants.RefreshTokenExpireTime)
+		if ok := h.Sessions.Delete(&session); ok {
 			log.Printf("Session for user %s has been deleted as expired\n", usr.Email)
 		}
 	}()
@@ -296,6 +266,16 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	session.GetSession(r.Body)
 	log.Printf("Trying to refresh session with token %s\n", session.RefreshToken)
 
+	// get user
+	getError := h.Sessions.Get(&session)
+	if checker.CheckError(getError) {
+		return
+	}
+	if session.Expire < time.Now().Unix() {
+		checker.NewError(constants.TokenIsExpired, http.StatusBadRequest)
+		return
+	}
+
 	// generate new refresh token
 	refreshToken, refreshTokenError := logic.CreateRefreshToken()
 	if checker.CheckCustomError(refreshTokenError, http.StatusInternalServerError) {
@@ -305,21 +285,9 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	session.Update(*refreshToken)
 
 	// update session in db
-	response, requestError := h.Sessions.AddOrUpdate(&session)
+	requestError := h.Sessions.Add(&session)
 	if checker.CheckError(requestError) {
 		return
-	}
-	if response.StatusCode != http.StatusOK {
-		switch response.StatusCode {
-		case http.StatusNotFound:
-			log.Printf("No session with refresh token %s\n", session.RefreshToken)
-			checker.NewError(constants.InvalidRefreshToken, http.StatusNotFound)
-			return
-		case http.StatusForbidden:
-			log.Printf("Refresh token %s has been expired\n", session.RefreshToken)
-			checker.NewError(constants.InvalidRefreshToken, http.StatusForbidden)
-			return
-		}
 	}
 
 	// generate new access token

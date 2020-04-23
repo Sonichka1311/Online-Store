@@ -1,59 +1,103 @@
 package user
 
 import (
-	"fmt"
+	"database/sql"
+	"errors"
 	"net/http"
 	"shop/pkg/auth"
+	"shop/pkg/constants"
+	"shop/pkg/database"
 	"shop/pkg/models"
+	"time"
 )
 
 type Repo struct {
-	Connector *models.Connector
+	Connector *database.Connector
 }
 
 var (
-	UserHandler = "user"
-	ConfirmationHandler = "confirmation"
-	GetConfirmationHandler = func(token string) string { return fmt.Sprintf("%s/%s", ConfirmationHandler, token) }
-	GetUserHandler = func(email string) string { return fmt.Sprintf("%s/%s", UserHandler, email)}
+	usersTable = "users"
+	confirmationsTable = "confirmations"
 )
 
-func (r *Repo) AddUser(usr *User) (*http.Response, *models.Error) {
-	data, jsonError := usr.GetJson()
-	if jsonError != nil {
-		return nil, jsonError
+func (r *Repo) AddUser(usr *User) *models.Error {
+	row := r.Connector.SelectOne("login", usersTable, "login = ?", usr.Email)
+	var login string
+	dbErr := row.Scan(&login)
+	if dbErr != sql.ErrNoRows {
+		if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+			return err
+		}
+		if err, isErr := models.NewError(errors.New(constants.UserAlreadyExists), http.StatusConflict); isErr {
+			return err
+		}
 	}
-	return r.Connector.Post(UserHandler, data)
-}
-
-func (r *Repo) GetUser(usr *User) (*http.Response, *models.Error) {
-	return r.Connector.Get(GetUserHandler(usr.Email))
-}
-
-func (r *Repo) AddConfirmation(confirmation *auth.Confirmation) (*http.Response, *models.Error) {
-	data, jsonError := confirmation.GetJson()
-	if jsonError != nil {
-		return nil, jsonError
+	_, dbErr = r.Connector.Insert(usersTable, "login, password, confirm", "?, ?, ?", usr.Email, usr.Password, false)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
 	}
-	return r.Connector.Post(ConfirmationHandler, data)
+	return nil
 }
 
-func (r *Repo) GetConfirmation(token string) (*http.Response, *models.Error) {
-	return r.Connector.Get(GetConfirmationHandler(token))
-}
-
-func (r *Repo) DeleteConfirmation(confirmation *auth.Confirmation) (*http.Response, *models.Error) {
-	data, jsonError := confirmation.GetJson()
-	if jsonError != nil {
-		return nil, jsonError
+func (r *Repo) GetUser(usr *User) *models.Error {
+	row := r.Connector.SelectOne("password, confirm", usersTable, "login = ?", usr.Email)
+	dbErr := row.Scan(&usr.Password, &usr.Confirm)
+	if dbErr == sql.ErrNoRows {
+		if err, isErr := models.NewError(errors.New(constants.InvalidUser), http.StatusBadRequest); isErr {
+			return err
+		}
 	}
-	return r.Connector.Delete(ConfirmationHandler, data)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+	return nil
 }
 
-func (r *Repo) ConfirmUser(usr *User) (*http.Response, *models.Error) {
-	data, jsonError := usr.GetJson()
-	if jsonError != nil {
-		return nil, jsonError
+func (r *Repo) AddConfirmation(confirmation *auth.Confirmation) *models.Error {
+	row := r.Connector.SelectOne("login", confirmationsTable, "login = ?", confirmation.Email)
+	var log string
+	dbErr := row.Scan(&log)
+	if dbErr != sql.ErrNoRows {
+		if err, isErr := models.NewError(errors.New(constants.UserAlreadyExists), http.StatusConflict); isErr {
+			return err
+		}
 	}
-	return r.Connector.Put(UserHandler, data)
+
+	_, dbErr = r.Connector.Insert(
+		confirmationsTable,
+		"login, token, expire", "?, ?, ?",
+		confirmation.Email, confirmation.Token, confirmation.Expire,
+	)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+
+	go func() {
+		time.Sleep(constants.ConfirmationTokenExpireTime)
+		r.Connector.Delete(confirmationsTable, "token = ?", confirmation.Token)
+	}()
+
+	return nil
+}
+
+func (r *Repo) GetConfirmation(confirmation *auth.Confirmation) *models.Error {
+	row := r.Connector.SelectOne("login, expire", confirmationsTable, "token = ?", confirmation.Token)
+	dbErr := row.Scan(&confirmation.Email, &confirmation.Expire)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+	return nil
+}
+
+func (r *Repo) DeleteConfirmation(confirmation *auth.Confirmation) bool {
+	_, err := r.Connector.Delete(confirmationsTable, "token = ?", confirmation.Token)
+	return err == nil
+}
+
+func (r *Repo) ConfirmUser(confirmation *auth.Confirmation) *models.Error {
+	_, dbErr := r.Connector.Update(usersTable, "confirm = ?", "login = ?", true, confirmation.Email)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+	return nil
 }

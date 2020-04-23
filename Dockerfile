@@ -6,4 +6,4 @@ COPY pkg src/shop/pkg
 COPY go.mod src/shop
 WORKDIR src/shop
 
-RUN go mod vendor
+RUN go mod download

@@ -3,6 +3,6 @@ FROM shared-image:latest
 RUN mkdir http
 COPY . http
 WORKDIR http
-RUN go build -mod=vendor -o main .
+RUN go build -mod=mod -o main .
 
 CMD ["./main"]

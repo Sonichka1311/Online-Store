@@ -2,7 +2,7 @@ package constants
 
 import "time"
 
-const (
+var (
 	AccessTokenExpireTime = time.Minute * 5
 	RefreshTokenExpireTime = time.Hour
 	ConfirmationTokenExpireTime = time.Minute * 10
@@ -17,7 +17,7 @@ const (
 	QueueConnectionRetries = 10
 	QueueConnectionSleepTime = time.Second * 5
 	QueueServer = "amqp://guest:guest@rabbitmq:5672/"
-	SmtpServer = "mock"
+	MockServer = "mock"
 	TestUser = "test@mock"
 	TestPassword = "1234"
 	MockPort = 25

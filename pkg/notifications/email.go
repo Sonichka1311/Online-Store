@@ -9,10 +9,10 @@ import (
 )
 
 func SendEmail(to string, msg string) bool {
-	auth := smtp.PlainAuth("", constants.TestUser, constants.TestPassword, constants.SmtpServer)
+	auth := smtp.PlainAuth("", constants.TestUser, constants.TestPassword, constants.MockServer)
 
 	err := smtp.SendMail(
-		strings.Join([]string{constants.SmtpServer, strconv.Itoa(constants.MockPort)}, ":"),
+		strings.Join([]string{constants.MockServer, strconv.Itoa(constants.MockPort)}, ":"),
 		auth,
 		constants.TestUser,
 		[]string{to},

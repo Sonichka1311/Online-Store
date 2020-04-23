@@ -7,25 +7,24 @@ import (
 	"net/http"
 	"shop/pkg/constants"
 	"shop/pkg/models"
-	"strconv"
 	"time"
 )
 
 type Session struct {
 	Email 		 string `json:"email"`
 	RefreshToken string `json:"refresh_token"`
-	Expire       string `json:"expire"`
+	Expire       int64  `json:"expire"`
 }
 
 func (s *Session) Init(email, token string) {
 	s.Email = email
 	s.RefreshToken = token
-	s.Expire = strconv.Itoa(int(time.Now().Add(constants.RefreshTokenExpireTime).Unix()))
+	s.Expire = time.Now().Add(constants.RefreshTokenExpireTime).Unix()
 }
 
 func (s *Session) Update(token string) {
 	s.RefreshToken = token
-	s.Expire = strconv.Itoa(int(time.Now().Add(constants.RefreshTokenExpireTime).Unix()))
+	s.Expire = time.Now().Add(constants.RefreshTokenExpireTime).Unix()
 }
 
 func (s *Session) GetSession(body io.ReadCloser) *models.Error {

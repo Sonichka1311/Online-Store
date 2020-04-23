@@ -41,11 +41,19 @@ services:
       - 8080:8080
     networks:
       - all
-  tarantool:
-    build: db/
-    image: tarantool/tarantool:2.2.1
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0.17
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: "guest"
+      MYSQL_DATABASE: shop
     ports:
-      - 3301:3301
+      - 3307:3306
+    volumes:
+      - './pkg/database/:/docker-entrypoint-initdb.d/'
     networks:
       - all
 networks:

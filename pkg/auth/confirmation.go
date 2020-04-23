@@ -7,20 +7,19 @@ import (
 	"net/http"
 	"shop/pkg/constants"
 	"shop/pkg/models"
-	"strconv"
 	"time"
 )
 
 type Confirmation struct {
 	Email 	string 	`json:"email"`
 	Token 	string 	`json:"token"`
-	Expire 	string 	`json:"expire"`
+	Expire 	int64 	`json:"expire"`
 }
 
 func (c *Confirmation) Init(email, token string) {
 	c.Email = email
 	c.Token = token
-	c.Expire = strconv.Itoa(int(time.Now().Add(constants.ConfirmationTokenExpireTime).Unix()))
+	c.Expire = time.Now().Add(constants.ConfirmationTokenExpireTime).Unix()
 }
 
 func (c *Confirmation) GetConfirmation(body io.ReadCloser) *models.Error {

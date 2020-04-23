@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -10,11 +11,16 @@ type Replier struct {
 }
 
 func (replier *Replier) ReplyWithMessage(message string) error {
-	return json.NewEncoder(*(replier.Writer)).Encode(
+	err := json.NewEncoder(*(replier.Writer)).Encode(
 		ReplyWithMessage{
 			Message: message,
 		},
 	)
+	if err != nil {
+		log.Printf("Reply with message err: %s\n", err.Error())
+		return err
+	}
+	return nil
 }
 
 func (replier *Replier) ReplyWithJson(data interface{}) error {

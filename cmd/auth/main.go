@@ -1,23 +1,36 @@
 package main
 
 import (
+	"database/sql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"shop/pkg/constants"
+	"shop/pkg/database"
 	"shop/pkg/handlers"
-	"shop/pkg/logic"
-	"shop/pkg/models"
 	"shop/pkg/sessions"
 	"shop/pkg/user"
 	"strconv"
-	"sync"
+	"time"
 )
 
 func main() {
-	databaseConnector := models.Connector{
-		Router: models.Router{Host: logic.GetUrl(constants.Protocol, constants.DatabaseHost, constants.DatabasePort)},
-		Mutex:  sync.Mutex{},
+	db, dbError := sql.Open("mysql", "root:guest@tcp(mysql:3306)/shop?charset=utf8&interpolateParams=true")
+	if dbError != nil {
+		log.Fatalf("Cannot open database: %s", dbError.Error())
+	}
+
+	for tries := 0; tries < 10; tries++ {
+		dbError = db.Ping()
+		if dbError == nil {
+			break
+		}
+		log.Printf("Failed connect to database for %d times. Trying to reconnect...", tries + 1)
+		time.Sleep(3 * time.Second)
+	}
+	if dbError != nil {
+		log.Fatalf("Cannot connect to database: %s", dbError.Error())
 	}
 
 	notificationHandler := &handlers.NotificationHandler{}
@@ -29,10 +42,10 @@ func main() {
 
 	handler := handlers.AuthHandler{
 		Repo:   &user.Repo{
-			Connector:  &databaseConnector,
+			Connector:  database.NewConnector(db),
 		},
 		Sessions: &sessions.Repo{
-			Connector:	&databaseConnector,
+			Connector:	database.NewConnector(db),
 		},
 		Notifications: notificationHandler,
 	}
@@ -40,7 +53,7 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/signup", handler.SignUp)
-	router.HandleFunc("/{token}", handler.ConfirmRegister).Methods(http.MethodGet)
+	router.HandleFunc("/verify/{token}", handler.ConfirmRegister).Methods(http.MethodGet)
 	router.HandleFunc("/signin", handler.SignIn)
 	router.HandleFunc("/validate", handler.ValidateToken)
 	router.HandleFunc("/refresh", handler.RefreshToken)

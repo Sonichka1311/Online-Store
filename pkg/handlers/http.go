@@ -2,21 +2,21 @@ package handlers
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"shop/pkg/auth"
 	"shop/pkg/constants"
-	"shop/pkg/logic"
 	"shop/pkg/models"
 	"shop/pkg/product"
 	"shop/pkg/utils"
 	"sort"
 	"strconv"
+	"sync"
 )
 
 type ProductHandler struct {
-	Repo *product.Repo
-	Auth *auth.Repo
+	Repo 	*product.Repo
+	Auth 	*auth.Repo
+	Mutex 	*sync.RWMutex
 }
 
 func (h *ProductHandler) GetProductsList(w http.ResponseWriter, r *http.Request) {
@@ -25,60 +25,9 @@ func (h *ProductHandler) GetProductsList(w http.ResponseWriter, r *http.Request)
 	replier := models.Replier{Writer: &w}
 	checker := models.ErrorChecker{Replier: &replier}
 
-	response, requestError := h.Repo.GetAll()
-	if checker.CheckError(requestError) {
+	array, getError := h.Repo.GetAll()
+	if checker.CheckError(getError) {
 		return
-	}
-
-	defer response.Body.Close()
-	body, bodyParseError := ioutil.ReadAll(response.Body)
-	if checker.CheckCustomError(bodyParseError, http.StatusInternalServerError) {
-		return
-	}
-
-	var parsedData []interface {}
-	parseError := json.Unmarshal(body, &parsedData)
-	if checker.CheckCustomError(parseError, http.StatusInternalServerError) {
-		return
-	}
-
-	castError := func() bool { return checker.NewError("500 Internal server error", http.StatusInternalServerError) }
-	array := make([]models.Product, len(parsedData))
-	for index, item := range parsedData {
-		switch item.(type) {
-		case []interface{}:
-			elem := item.([]interface{})
-			if len(elem) > 2 {
-				array[index] = models.Product{}
-
-				if id, ok := elem[0].(float64); ok {
-					array[index].Id = int(id)
-				} else {
-					castError()
-					return
-				}
-
-				if name, ok := elem[1].(string); ok {
-					array[index].Name = name
-				} else {
-					castError()
-					return
-				}
-
-				if category, ok := elem[2].(string); ok {
-					array[index].Category = category
-				} else {
-					castError()
-					return
-				}
-			} else {
-				castError()
-				return
-			}
-		default:
-			castError()
-			return
-		}
 	}
 
 	sort.Slice(array, func(i int, j int) bool {
@@ -91,7 +40,7 @@ func (h *ProductHandler) GetProductsList(w http.ResponseWriter, r *http.Request)
 		}
 	})
 
-	res := models.AllItems{}
+	res := product.AllItems{}
 
 	countStr := r.URL.Query().Get("count")
 	pageStr := r.URL.Query().Get("page")
@@ -101,7 +50,7 @@ func (h *ProductHandler) GetProductsList(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if count < 1 {
-			checker.NewError("Invalid param count", http.StatusBadRequest)
+			checker.NewError(constants.InvalidParams, http.StatusBadRequest)
 		}
 
 		page, pageError := strconv.Atoi(pageStr)
@@ -109,7 +58,7 @@ func (h *ProductHandler) GetProductsList(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		if count < 1 {
-			checker.NewError("Invalid param page", http.StatusBadRequest)
+			checker.NewError(constants.InvalidParams, http.StatusBadRequest)
 		}
 
 		begin := utils.Min((page - 1) * count, 0)
@@ -149,24 +98,23 @@ func (h *ProductHandler) AddProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body := r.Body
-	defer body.Close()
-	readBody, bodyParseError := ioutil.ReadAll(body)
-	if checker.CheckCustomError(bodyParseError, http.StatusBadRequest) {
+	var prod product.Product
+	parseError := prod.GetFromBody(r.Body)
+	if checker.CheckError(parseError) {
 		return
 	}
 
-	response, requestError := h.Repo.Add(&readBody)
+	requestError := h.Repo.Add(&prod)
 	if checker.CheckError(requestError) {
 		return
 	}
 
-	writeData, jsonError := logic.GetProductJSON(response.Body)
+	jsonData, jsonError := prod.GetJson()
 	if checker.CheckError(jsonError) {
 		return
 	}
 
-	if checker.CheckCustomError(replier.ReplyWithData(*writeData), http.StatusInternalServerError) {
+	if checker.CheckCustomError(replier.ReplyWithData(jsonData), http.StatusInternalServerError) {
 		return
 	}
 }
@@ -177,17 +125,22 @@ func (h *ProductHandler) ProductCard(w http.ResponseWriter, r *http.Request) {
 	replier := models.Replier{Writer: &w}
 	checker := models.ErrorChecker{Replier: &replier}
 
-	response, requestError := h.Repo.Get(r.URL.Query().Get("id"))
-	if checker.CheckError(requestError) {
+	id, intError := strconv.Atoi(r.URL.Query().Get("id"))
+	if checker.CheckCustomError(intError, http.StatusBadRequest) {
 		return
 	}
 
-	writeData, jsonError := logic.GetProductJSON(response.Body)
+	prod, getError := h.Repo.Get(id)
+	if checker.CheckError(getError) {
+		return
+	}
+
+	jsonData, jsonError := prod.GetJson()
 	if checker.CheckError(jsonError) {
 		return
 	}
 
-	if checker.CheckCustomError(replier.ReplyWithData(*writeData), http.StatusInternalServerError) {
+	if checker.CheckCustomError(replier.ReplyWithData(jsonData), http.StatusInternalServerError) {
 		return
 	}
 }
@@ -204,22 +157,30 @@ func (h *ProductHandler) EditProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonData, getJsonError := logic.GetProductJSON(r.Body)
-	if checker.CheckError(getJsonError) {
+	var prod product.Product
+	parseError := prod.GetFromBody(r.Body)
+	if checker.CheckError(parseError) {
 		return
 	}
 
-	response, requestError := h.Repo.Edit(jsonData)
+	h.Mutex.RLock()
+	requestError := h.Repo.Edit(&prod)
 	if checker.CheckError(requestError) {
 		return
 	}
 
-	writeData, jsonError := logic.GetProductJSON(response.Body)
+	resp, getError := h.Repo.Get(prod.Id)
+	if checker.CheckError(getError) {
+		return
+	}
+	h.Mutex.RUnlock()
+
+	jsonData, jsonError := resp.GetJson()
 	if checker.CheckError(jsonError) {
 		return
 	}
 
-	if checker.CheckCustomError(replier.ReplyWithData(*writeData), http.StatusInternalServerError) {
+	if checker.CheckCustomError(replier.ReplyWithData(jsonData), http.StatusInternalServerError) {
 		return
 	}
 }
@@ -236,22 +197,26 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jsonData, jsonError := logic.GetProductJSON(r.Body)
-	if checker.CheckError(jsonError) {
+	var prod product.Product
+	parseError := prod.GetFromBody(r.Body)
+	if checker.CheckError(parseError) {
 		return
 	}
 
-	response, requestError := h.Repo.Delete(jsonData)
+	h.Mutex.RLock()
+	requestError := h.Repo.Delete(&prod)
 	if checker.CheckError(requestError) {
 		return
 	}
 
-	writeData, getJsonError := logic.GetProductJSON(response.Body)
-	if checker.CheckError(getJsonError) {
+	h.Mutex.RUnlock()
+
+	jsonData, jsonError := prod.GetJson()
+	if checker.CheckError(jsonError) {
 		return
 	}
 
-	if checker.CheckCustomError(replier.ReplyWithData(*writeData), http.StatusInternalServerError) {
+	if checker.CheckCustomError(replier.ReplyWithData(jsonData), http.StatusInternalServerError) {
 		return
 	}
 }

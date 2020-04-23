@@ -1,34 +1,61 @@
 package sessions
 
 import (
+	"database/sql"
+	"errors"
+	"log"
 	"net/http"
+	"shop/pkg/constants"
+	"shop/pkg/database"
 	"shop/pkg/models"
 )
 
 type Repo struct {
-	Connector *models.Connector
+	Connector *database.Connector
 }
 
 var (
-	SessionHandler = "session"
+	sessionsTable = "sessions"
 )
 
-func (r *Repo) GetUserFrom(data *[]byte) (*http.Response, *models.Error) {
-	return r.Connector.Post(SessionHandler, data)
+func (r *Repo) Add(session *Session) *models.Error {
+	log.Printf("Add session with token %s", session.RefreshToken)
+	row := r.Connector.SelectOne("login", sessionsTable, "login = ?", session.Email)
+	dbErr := row.Scan(&session.Email)
+	switch dbErr {
+	case sql.ErrNoRows:
+		_, dbErr = r.Connector.Insert(sessionsTable, "login, token, expire", "?, ?, ?", session.Email, session.RefreshToken, session.Expire)
+		if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+			return err
+		}
+	case nil:
+		_, dbErr = r.Connector.Update(sessionsTable, "token = ?, expire = ?", "login = ?", session.RefreshToken, session.Expire, session.Email)
+		if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+			return err
+		}
+	default:
+		if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+			return err
+		}
+	}
+	return nil
 }
 
-func (r *Repo) AddOrUpdate(session *Session) (*http.Response, *models.Error) {
-	data, jsonError := session.GetJson()
-	if jsonError != nil {
-		return nil, jsonError
+func (r *Repo) Get(session *Session) *models.Error {
+	row := r.Connector.SelectOne("login, expire", sessionsTable, "token = ?", session.RefreshToken)
+	dbErr := row.Scan(&session.Email, &session.Expire)
+	if dbErr == sql.ErrNoRows {
+		if err, isErr := models.NewError(errors.New(constants.TokenIsExpired), http.StatusBadRequest); isErr {
+			return err
+		}
 	}
-	return r.Connector.Put(SessionHandler, data)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+	return nil
 }
 
-func (r *Repo) Delete(session *Session) (*http.Response, *models.Error) {
-	data, jsonError := session.GetJson()
-	if jsonError != nil {
-		return nil, jsonError
-	}
-	return r.Connector.Delete(SessionHandler, data)
+func (r *Repo) Delete(session *Session) bool {
+	_, dbErr := r.Connector.Delete(sessionsTable, "login = ?", session.Email)
+	return dbErr == nil
 }

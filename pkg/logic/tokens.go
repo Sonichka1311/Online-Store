@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+var ReturnedAccessToken string // ONLY for tests
 func CreateAccessToken(email string) (string, error) {
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"email": models.Email{Email: email},
@@ -16,9 +17,11 @@ func CreateAccessToken(email string) (string, error) {
 		"exp":  time.Now().Add(constants.AccessTokenExpireTime).Unix(),
 	})
 
+	ReturnedAccessToken , _ = accessToken.SignedString([]byte(constants.SigningToken))
 	return accessToken.SignedString([]byte(constants.SigningToken))
 }
 
+var ReturnedRefreshToken string // ONLY for tests
 func CreateRefreshToken() (*string, error) {
 	uuidToken, uuidError := uuid.NewRandom()
 	if uuidError != nil {
@@ -27,9 +30,11 @@ func CreateRefreshToken() (*string, error) {
 	}
 	token := uuidToken.String()
 
+	ReturnedRefreshToken = token
 	return &token, nil
 }
 
+var ReturnedConfirmationToken string // ONLY for tests
 func CreateConfirmationToken() (*string, error) {
 	uuidToken, uuidError := uuid.NewRandom()
 	if uuidError != nil {
@@ -38,5 +43,6 @@ func CreateConfirmationToken() (*string, error) {
 	}
 	token := uuidToken.String()
 
+	ReturnedConfirmationToken = token
 	return &token, nil
 }
