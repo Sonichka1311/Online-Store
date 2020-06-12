@@ -18,8 +18,10 @@ CREATE TABLE `users` (
     `login` varchar(255) NOT NULL,
     `password` varchar(255) NOT NULL,
     `confirm` TINYINT NOT NULL,
+    `role` varchar(255) default 'user',
     PRIMARY KEY (`login`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+INSERT INTO `users` VALUES ('admin', '$2a$10$lE5l1j269xY.DppgGdk8Euyc8xcrCH6ItX8yYFeUJDbe64nJ7fmUu', 1, 'admin');
 
 DROP TABLE IF EXISTS `confirmations`;
 CREATE TABLE `confirmations`(

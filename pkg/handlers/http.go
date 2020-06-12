@@ -15,7 +15,6 @@ import (
 
 type ProductHandler struct {
 	Repo 	*product.Repo
-	Auth 	*auth.Repo
 	Mutex 	*sync.RWMutex
 }
 
@@ -92,9 +91,8 @@ func (h *ProductHandler) AddProduct(w http.ResponseWriter, r *http.Request) {
 	replier := models.Replier{Writer: &w}
 	checker := models.ErrorChecker{Replier: &replier}
 
-	authError := h.Auth.Verify(r.Header.Get("AccessToken"))
-	if authError != nil {
-		checker.NewError(constants.Unauthorized, http.StatusUnauthorized)
+	_, authError := auth.Verify(r.Header.Get("AccessToken"))
+	if checker.CheckError(authError) {
 		return
 	}
 
@@ -151,9 +149,8 @@ func (h *ProductHandler) EditProduct(w http.ResponseWriter, r *http.Request) {
 	replier := models.Replier{Writer: &w}
 	checker := models.ErrorChecker{Replier: &replier}
 
-	authError := h.Auth.Verify(r.Header.Get("AccessToken"))
-	if authError != nil {
-		checker.NewError(constants.Unauthorized, http.StatusUnauthorized)
+	_, authError := auth.Verify(r.Header.Get("AccessToken"))
+	if checker.CheckError(authError) {
 		return
 	}
 
@@ -191,9 +188,8 @@ func (h *ProductHandler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	replier := models.Replier{Writer: &w}
 	checker := models.ErrorChecker{Replier: &replier}
 
-	authError := h.Auth.Verify(r.Header.Get("AccessToken"))
-	if authError != nil {
-		checker.NewError(constants.Unauthorized, http.StatusUnauthorized)
+	_, authError := auth.Verify(r.Header.Get("AccessToken"))
+	if checker.CheckError(authError) {
 		return
 	}
 

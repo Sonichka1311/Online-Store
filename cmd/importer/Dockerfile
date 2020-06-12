@@ -1,8 +1,8 @@
 FROM shared-image:latest
 
-RUN mkdir auth
-WORKDIR auth
-COPY . .
+RUN mkdir importer
+COPY . importer
+WORKDIR importer
 RUN go build -mod=mod -o main .
 
 CMD ["./main"]

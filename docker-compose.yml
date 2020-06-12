@@ -9,29 +9,54 @@ services:
     build: cmd/auth/
     ports:
       - 3687:3687
+      - 3867:3867
     networks:
-      - all
+      - auth
+      - notifications
+      - verification
     depends_on:
       - rabbitmq
+
+  uploader:
+    build: cmd/uploader/
+    networks:
+      - uploader
+      - load
+    depends_on:
+      - rabbitmqupload
+
+  importer:
+    build: cmd/importer/
+    ports:
+      - 3838:3838
+    networks:
+      - uploader
 
   rabbitmq:
     image: rabbitmq:3-management
     ports:
       - 5672:5672
     networks:
-      - all
+      - notifications
+
+  rabbitmqupload:
+    image: rabbitmq:3-management
+    ports:
+      - 5762:5762
+    networks:
+      - uploader
 
   mock:
     build: cmd/mock
     ports:
       - 25:25
     networks:
-      - all
+      - notifications
 
   notifications:
     build: cmd/notifications
     networks:
-      - all
+      - notifications
     depends_on:
       - rabbitmq
 
@@ -40,7 +65,9 @@ services:
     ports:
       - 8080:8080
     networks:
-      - all
+      - server
+      - verification
+      - load
     depends_on:
       - mysql
 
@@ -55,6 +82,12 @@ services:
     volumes:
       - './pkg/database/:/docker-entrypoint-initdb.d/'
     networks:
-      - all
+      - auth
+      - server
 networks:
-  all:
+  auth:
+  notifications:
+  server:
+  uploader:
+  verification:
+  load:

@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"encoding/json"
-	"github.com/dgrijalva/jwt-go"
 	"github.com/gorilla/mux"
-	"io/ioutil"
+	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"shop/pkg/auth"
@@ -34,6 +32,10 @@ func (h *AuthHandler) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Printf("Trying to register email %s\n", usr.Email)
+
+	hashPassword, _ := bcrypt.GenerateFromPassword([]byte(usr.Password), bcrypt.DefaultCost)
+	usr.Password = string(hashPassword)
+	log.Printf("PASSWORD: %s\n", usr.Password)
 
 	// add new user to db
 	requestError := h.Repo.AddUser(usr)
@@ -136,20 +138,21 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	checker := models.ErrorChecker{Replier: &replier}
 
 	// parse user from body
-	usr := &user.User{}
-	if checker.CheckError(usr.GetUser(r.Body)) {
+	bodyUsr := &user.User{}
+	if checker.CheckError(bodyUsr.GetUser(r.Body)) {
 		return
 	}
-	log.Printf("Trying to sign in for user %s\n", usr.Email)
+	log.Printf("Trying to sign in for user %s\n", bodyUsr.Email)
 
 	// get user by email from db to check confirmation
-	getError := h.Repo.GetUser(usr)
+	usr := *bodyUsr
+	getError := h.Repo.GetUser(&usr)
 	if checker.CheckError(getError) {
 		return
 	}
 
 	// check if password is valid and user is verified
-	if usr.Password != usr.Password {
+	if bcrypt.CompareHashAndPassword([]byte(usr.Password), []byte(bodyUsr.Password)) != nil {
 		log.Printf("User %s send invalid password\n", usr.Email)
 		checker.NewError(constants.InvalidUser, http.StatusBadRequest)
 		return
@@ -186,7 +189,7 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	// generate access token
-	accessToken, tokenError := logic.CreateAccessToken(usr.Email)
+	accessToken, tokenError := logic.CreateAccessToken(&usr)
 	if checker.CheckCustomError(tokenError, http.StatusInternalServerError) {
 		return
 	}
@@ -203,58 +206,6 @@ func (h *AuthHandler) SignIn(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
-func (h *AuthHandler) ValidateToken(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-
-	replier := models.Replier{Writer: &w}
-	checker := models.ErrorChecker{Replier: &replier}
-
-	body := r.Body
-	defer body.Close()
-	readBody, bodyParseError := ioutil.ReadAll(body)
-	if checker.CheckCustomError(bodyParseError, http.StatusBadRequest) {
-		log.Println("Error while reading body")
-		return
-	}
-
-	// parse access token from body
-	var parsedBody models.AccessToken
-	parsedBodyError := json.Unmarshal(readBody, &parsedBody)
-	if checker.CheckCustomError(parsedBodyError, http.StatusBadRequest) {
-		log.Println("Error while parsing body")
-		return
-	}
-
-	// check if access token exists
-	accessTokenStr := parsedBody.TokenStr
-	if len(accessTokenStr) == 0 {
-		log.Println("Authorization token is empty string")
-		checker.NewError(constants.Unauthorized, http.StatusBadRequest)
-		return
-	}
-
-	// parse access token into struct
-	accessToken, accessTokenParseError := jwt.Parse(
-		accessTokenStr,
-		func(token *jwt.Token) (interface{}, error) {
-			return []byte(constants.SigningToken), nil
-		},
-	)
-	if checker.CheckCustomError(accessTokenParseError, http.StatusInternalServerError) {
-		log.Println("Failed to parse access token")
-		return
-	}
-
-	// check if access token has not been expired
-	if accessToken.Valid {
-		log.Printf("Token %s is valid \n", accessTokenStr)
-		checker.CheckCustomError(replier.ReplyWithMessage(constants.ValidAccessToken), http.StatusInternalServerError)
-	} else {
-		log.Printf("Token %s is invalid \n", accessTokenStr)
-		checker.NewError(constants.Unauthorized, http.StatusForbidden)
-	}
-}
-
 func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
@@ -266,13 +217,20 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	session.GetSession(r.Body)
 	log.Printf("Trying to refresh session with token %s\n", session.RefreshToken)
 
-	// get user
+	// get session from db
 	getError := h.Sessions.Get(&session)
 	if checker.CheckError(getError) {
 		return
 	}
 	if session.Expire < time.Now().Unix() {
 		checker.NewError(constants.TokenIsExpired, http.StatusBadRequest)
+		return
+	}
+
+	// get user by login
+	usr := &user.User{Email: session.Email}
+	getUserError := h.Repo.GetUser(usr)
+	if checker.CheckError(getUserError) {
 		return
 	}
 
@@ -291,7 +249,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// generate new access token
-	accessToken, signedError := logic.CreateAccessToken(session.Email)
+	accessToken, signedError := logic.CreateAccessToken(usr)
 	if checker.CheckCustomError(signedError, http.StatusInternalServerError) {
 		return
 	}
@@ -304,6 +262,89 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 				RefreshToken: *refreshToken,
 			},
 		),
+		http.StatusInternalServerError,
+	)
+}
+
+func (h *AuthHandler) CreateNewAdmin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	replier := models.Replier{Writer: &w}
+	checker := models.ErrorChecker{Replier: &replier}
+
+	// parse user login from body
+	usr := &user.User{}
+	if checker.CheckError(usr.GetUser(r.Body)) {
+		return
+	}
+	log.Printf("Trying to upgrade user %s\n", usr.Email)
+
+	// check rights
+	_, authError := auth.Verify(r.Header.Get("AccessToken"))
+	if checker.CheckError(authError) {
+		return
+	}
+
+	// get user by login
+	getUserError := h.Repo.GetUser(usr)
+	if checker.CheckError(getUserError) {
+		return
+	}
+
+	// upgrade user role
+	upgradeError := h.Repo.UpgradeUser(usr)
+	if checker.CheckError(upgradeError) {
+		return
+	}
+
+	log.Printf("Upgraded user %s\n", usr.Email)
+	checker.CheckCustomError(
+		replier.ReplyWithMessage("User " + usr.Email + " has been upgraded to admin"),
+		http.StatusInternalServerError,
+	)
+}
+
+func (h *AuthHandler) RemoveAdmin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
+	replier := models.Replier{Writer: &w}
+	checker := models.ErrorChecker{Replier: &replier}
+
+	// parse user login from body
+	usr := &user.User{}
+	if checker.CheckError(usr.GetUser(r.Body)) {
+		return
+	}
+	log.Printf("Trying to downgrade user %s\n", usr.Email)
+
+	// check rights
+	_, authError := auth.Verify(r.Header.Get("AccessToken"))
+	if checker.CheckError(authError) {
+		return
+	}
+
+	// get user by login
+	getUserError := h.Repo.GetUser(usr)
+	if checker.CheckError(getUserError) {
+		return
+	}
+
+	// check if admin try downgrade super admin
+	if usr.Email == constants.SuperAdmin {
+		log.Println("Failed to downgrade user: super admin can't be downgraded")
+		checker.NewError(constants.NoRight, http.StatusForbidden)
+		return
+	}
+
+	// downgrade user role
+	downgradeError := h.Repo.DowngradeUser(usr)
+	if checker.CheckError(downgradeError) {
+		return
+	}
+
+	log.Printf("Downgraded user %s\n", usr.Email)
+	checker.CheckCustomError(
+		replier.ReplyWithMessage("User " + usr.Email + " has been downgraded to user"),
 		http.StatusInternalServerError,
 	)
 }

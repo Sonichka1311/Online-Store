@@ -13,6 +13,7 @@ type User struct {
 	Email 		string 	`json:"email"`
 	Password 	string 	`json:"password,omitempty"`
 	Confirm		bool	`json:"confirm,omitempty"`
+	Role		string  `json:"role,omitempty"`
 }
 
 func (u *User) GetUser(body io.ReadCloser) *models.Error {

@@ -1,7 +1,11 @@
 package models
 
 import (
+	"encoding/json"
 	"github.com/dgrijalva/jwt-go"
+	"io"
+	"io/ioutil"
+	"net/http"
 )
 
 type ReplyWithMessage struct {
@@ -34,4 +38,31 @@ type AuthToken struct {
 type EmailNotification struct {
 	Email 	string
 	Message string
+}
+
+type Verification struct {
+	Message string `json:"message"`
+	Role    string `json:"role"`
+}
+
+func (v Verification) GetJson() ([]byte, *Error) {
+	jsonData, jsonError := json.Marshal(v)
+	if err, isErr := NewError(jsonError, http.StatusInternalServerError); isErr {
+		return nil, err
+	}
+	return jsonData, nil
+}
+
+func (v *Verification) GetFromBody(reader io.ReadCloser) *Error {
+	defer reader.Close()
+	body, bodyParseError := ioutil.ReadAll(reader)
+	if err, isErr := NewError(bodyParseError, http.StatusInternalServerError); isErr {
+		return err
+	}
+	unmarshalError := json.Unmarshal(body, v)
+	if err, isErr := NewError(unmarshalError, http.StatusInternalServerError); isErr {
+		return err
+	}
+
+	return nil
 }

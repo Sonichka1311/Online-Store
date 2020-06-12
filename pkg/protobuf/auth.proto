@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package auth;
+option go_package = ".;auth";
+
+message Verification {
+  string message = 1;
+  string role    = 2;
+}
+
+message Token {
+  string token   = 1;
+}
+
+service Auth {
+  rpc ValidateToken(Token) returns(Verification) {}
+}

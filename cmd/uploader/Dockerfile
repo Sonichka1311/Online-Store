@@ -1,8 +1,8 @@
 FROM shared-image:latest
 
-RUN mkdir auth
-WORKDIR auth
-COPY . .
+RUN mkdir uploader
+COPY . uploader
+WORKDIR uploader
 RUN go build -mod=mod -o main .
 
 CMD ["./main"]

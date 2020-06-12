@@ -6,13 +6,15 @@ import (
 	"log"
 	"shop/pkg/constants"
 	"shop/pkg/models"
+	"shop/pkg/user"
 	"time"
 )
 
 var ReturnedAccessToken string // ONLY for tests
-func CreateAccessToken(email string) (string, error) {
+func CreateAccessToken(usr *user.User) (string, error) {
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"email": models.Email{Email: email},
+		"email": models.Email{Email: usr.Email},
+		"role": usr.Role,
 		"iat":  time.Now().Unix(),
 		"exp":  time.Now().Add(constants.AccessTokenExpireTime).Unix(),
 	})

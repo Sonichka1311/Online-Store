@@ -11,31 +11,31 @@ type Connector struct {
 	Mutex  sync.Mutex
 }
 
-func (connector Connector) Get(handler string) (*http.Response, *Error) {
+func (connector *Connector) Get(handler string) (*http.Response, *Error) {
 	connector.Mutex.Lock()
 	defer connector.Mutex.Unlock()
 	return connector.Request(handler, http.MethodGet, nil)
 }
 
-func (connector Connector) Post(handler string, data *[]byte) (*http.Response, *Error) {
+func (connector *Connector) Post(handler string, data *[]byte) (*http.Response, *Error) {
 	connector.Mutex.Lock()
 	defer connector.Mutex.Unlock()
 	return connector.Request(handler, http.MethodPost, data)
 }
 
-func (connector Connector) Put(handler string, data *[]byte) (*http.Response, *Error) {
+func (connector *Connector) Put(handler string, data *[]byte) (*http.Response, *Error) {
 	connector.Mutex.Lock()
 	defer connector.Mutex.Unlock()
 	return connector.Request(handler, http.MethodPut, data)
 }
 
-func (connector Connector) Delete(handler string, data *[]byte) (*http.Response, *Error) {
+func (connector *Connector) Delete(handler string, data *[]byte) (*http.Response, *Error) {
 	connector.Mutex.Lock()
 	defer connector.Mutex.Unlock()
 	return connector.Request(handler, http.MethodDelete, data)
 }
 
-func (connector Connector) Request(handler string, requestType string, data *[]byte) (*http.Response, *Error) {
+func (connector *Connector) Request(handler string, requestType string, data *[]byte) (*http.Response, *Error) {
 	var response *http.Response
 	var requestError error
 	switch requestType {

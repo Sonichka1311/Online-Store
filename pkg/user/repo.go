@@ -40,10 +40,10 @@ func (r *Repo) AddUser(usr *User) *models.Error {
 }
 
 func (r *Repo) GetUser(usr *User) *models.Error {
-	row := r.Connector.SelectOne("password, confirm", usersTable, "login = ?", usr.Email)
-	dbErr := row.Scan(&usr.Password, &usr.Confirm)
+	row := r.Connector.SelectOne("password, confirm, role", usersTable, "login = ?", usr.Email)
+	dbErr := row.Scan(&usr.Password, &usr.Confirm, &usr.Role)
 	if dbErr == sql.ErrNoRows {
-		if err, isErr := models.NewError(errors.New(constants.InvalidUser), http.StatusBadRequest); isErr {
+		if err, isErr := models.NewError(errors.New(constants.NoUser), http.StatusBadRequest); isErr {
 			return err
 		}
 	}
@@ -73,7 +73,7 @@ func (r *Repo) AddConfirmation(confirmation *auth.Confirmation) *models.Error {
 	}
 
 	go func() {
-		time.Sleep(constants.ConfirmationTokenExpireTime)
+		time.Sleep(2 * constants.ConfirmationTokenExpireTime)
 		r.Connector.Delete(confirmationsTable, "token = ?", confirmation.Token)
 	}()
 
@@ -96,6 +96,22 @@ func (r *Repo) DeleteConfirmation(confirmation *auth.Confirmation) bool {
 
 func (r *Repo) ConfirmUser(confirmation *auth.Confirmation) *models.Error {
 	_, dbErr := r.Connector.Update(usersTable, "confirm = ?", "login = ?", true, confirmation.Email)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+	return nil
+}
+
+func (r *Repo) UpgradeUser(usr *User) *models.Error {
+	_, dbErr := r.Connector.Update(usersTable, "role = ?", "login = ?", "admin", usr.Email)
+	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
+		return err
+	}
+	return nil
+}
+
+func (r *Repo) DowngradeUser(usr *User) *models.Error {
+	_, dbErr := r.Connector.Update(usersTable, "role = ?", "login = ?", "user", usr.Email)
 	if err, isErr := models.NewError(dbErr, http.StatusInternalServerError); isErr {
 		return err
 	}

@@ -5,10 +5,13 @@ var (
 	UserAlreadyExists = "user with this email already exists"
 	ExpiredConfirmation = "link has been expired or doesn't exists"
 	InvalidUser = "invalid email or password"
+	NoUser = "this user doesn't seem to exist"
 	NotConfirmed = "account hasn't been verified"
 	InvalidRefreshToken = "invalid or expired refresh token"
 	InvalidParams = "invalid params"
 	TokenIsExpired = "token has been expired or doesn't exist"
 	NoProduct = "no product with this id"
 	ProductAlreadyExists = "product with this name already exists"
+	InternalError = "internal server error"
+	NoRight = "access denied"
 )
