@@ -1,10 +1,18 @@
 package handlers
 
 import (
+	"bufio"
 	"encoding/json"
 	"github.com/streadway/amqp"
+	"io"
 	"log"
+	"net/http"
+	"shop/pkg/auth"
+	"strings"
+
+	//"shop/pkg/auth"
 	"shop/pkg/constants"
+	"shop/pkg/models"
 	"shop/pkg/product"
 	"time"
 )
@@ -68,11 +76,17 @@ func (h *ImporterHandler) Close() {
 	_ = h.Connector.Close()
 }
 
-func (h *ImporterHandler) SendUploadRequest(products []product.Product) error {
+func (h *ImporterHandler) SendUploadRequest(products []product.Product, token string) error {
 	log.Printf("Trying to import products")
 
-	// array to json
-	jsonArray, jsonError := json.Marshal(products)
+	// init request
+	req := product.Uploading{
+		Token:    token,
+		Products: products,
+	}
+
+	// request to json
+	jsonReq, jsonError := json.Marshal(req)
 	if jsonError != nil {
 		log.Printf("Notification: SendRequest error: %s\n", jsonError.Error())
 		return jsonError
@@ -86,7 +100,7 @@ func (h *ImporterHandler) SendUploadRequest(products []product.Product) error {
 		false,
 		amqp.Publishing{
 			ContentType: "application/json",
-			Body:        jsonArray,
+			Body:        jsonReq,
 		},
 	)
 	if publishError != nil {
@@ -95,4 +109,65 @@ func (h *ImporterHandler) SendUploadRequest(products []product.Product) error {
 	}
 
 	return nil
+}
+
+func (h *ImporterHandler) ImportFile(w http.ResponseWriter, r *http.Request) {
+	replier := models.Replier{Writer: &w}
+	checker := models.ErrorChecker{Replier: &replier}
+
+	_, authError := auth.Verify(r.Header.Get("AccessToken"))
+	if checker.CheckError(authError) {
+		return
+	}
+
+	_ = r.ParseMultipartForm(10 << 30)
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		log.Printf("bad file: %v", err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	log.Printf("Upload file: name=%s, size=%d", header.Filename, header.Size)
+
+	defer file.Close()
+	rr := bufio.NewReader(file)
+
+	var products []product.Product
+	flag := true
+	_, err = rr.ReadString('\n')
+	if err != nil {
+		flag = false
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	for flag {
+		line, err := rr.ReadString('\n')
+		line = strings.TrimSuffix(line, "\r")
+		log.Printf("Read line: %s\n", line)
+
+		if err == io.EOF {
+			flag = false
+		} else if err != nil {
+			log.Printf("Bad line: %v\n", err)
+			continue
+		}
+
+		var prod product.Product
+		parseErr := prod.GetFromCsv(line)
+		if parseErr != nil {
+			log.Printf("Bad line: %v\n", err)
+			continue
+		}
+		products = append(products, prod)
+		log.Printf("Append product with id %d\n", prod.Id)
+
+		if len(products) == 20 || (!flag && len(products) > 0) {
+			log.Println("Send upload request")
+			h.SendUploadRequest(products, r.Header.Get("AccessToken"))
+			products = products[:0]
+		}
+	}
+	log.Println("File uploaded")
+
+	w.WriteHeader(http.StatusOK)
 }
