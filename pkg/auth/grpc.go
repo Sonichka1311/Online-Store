@@ -41,9 +41,10 @@ func (s ValidateServer) ValidateToken(_ context.Context, token *Token) (*Verific
 		}
 	}
 
-	// create reply with message and user role
+	// create reply with message and user email and role
 	res.Message = constants.ValidAccessToken
 	res.Role = claim["role"].(string)
+	res.Email = claim["email"].(string)
 
 	// check if access token has not been expired
 	if accessToken.Valid {

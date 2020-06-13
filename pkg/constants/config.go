@@ -3,8 +3,8 @@ package constants
 import "time"
 
 var (
-	AccessTokenExpireTime       = time.Minute * 5
-	RefreshTokenExpireTime      = time.Hour
+	AccessTokenExpireTime       = time.Minute * 20
+	RefreshTokenExpireTime      = time.Hour * 24
 	ConfirmationTokenExpireTime = time.Minute * 10
 	SigningToken                = "2816e66cb08c9f4cb5d7c080b2fca85f17cdb1cbe32380c7fdde9cf469185e30"
 	MainHost                    = "server"

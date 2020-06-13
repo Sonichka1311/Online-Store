@@ -90,6 +90,7 @@ services:
     networks:
       - auth
       - server
+      - uploader
 networks:
   auth:
   notifications:

@@ -40,3 +40,12 @@ CREATE TABLE `sessions` (
     PRIMARY KEY (`login`),
     INDEX (`token`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+DROP TABLE IF EXISTS `uploads`;
+CREATE TABLE `uploads` (
+    `login` varchar(255) NOT NULL,
+    `current` bigint default 0,
+    `max` bigint default 0,
+    `enough` boolean default false,
+    PRIMARY KEY (`login`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
