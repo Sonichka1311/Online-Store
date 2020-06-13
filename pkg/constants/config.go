@@ -9,7 +9,7 @@ var (
 	SigningToken                = "2816e66cb08c9f4cb5d7c080b2fca85f17cdb1cbe32380c7fdde9cf469185e30"
 	MainHost                    = "server"
 	Protocol                    = "http"
-	NotificationUrl             = "http://a5f2055f8d20.ngrok.io"
+	NotificationUrl             = "a5f2055f8d20.ngrok.io"
 	AuthHost                    = "auth"
 	MainPort                    = 8080
 	AuthPort                    = 3687
@@ -26,4 +26,5 @@ var (
 	SuperAdmin			 		= "admin"
 	DatabaseConnectionRetries 	= 10
 	DatabaseConnectionSleepTime = time.Second * 10
+	SmsRuId 					= "F043B94F-3F15-BA86-6720-FA6537CB03B6"
 )

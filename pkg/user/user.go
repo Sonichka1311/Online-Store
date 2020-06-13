@@ -11,6 +11,7 @@ import (
 
 type User struct {
 	Email 		string 	`json:"email"`
+	Phone       string  `json:"phone,omitempty"`
 	Password 	string 	`json:"password,omitempty"`
 	Confirm		bool	`json:"confirm,omitempty"`
 	Role		string  `json:"role,omitempty"`

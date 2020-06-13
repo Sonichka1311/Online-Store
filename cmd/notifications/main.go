@@ -24,18 +24,25 @@ func main() {
 	for message := range messages {
 		log.Printf("Received a message: %s\n", message.Body)
 
-		notification := models.EmailNotification{}
+		notification := models.Notification{}
 		jsonError := json.Unmarshal(message.Body, &notification)
 		if jsonError != nil {
 			log.Println("Failed to parse message")
 			return
 		}
 
-		ok := notifications.SendEmail(notification.Email, notification.Message)
-
-		if ok {
+		emailOk := notifications.SendEmail(notification.Email, notification.Message)
+		if emailOk {
 			log.Println("Email sent")
 			message.Ack(false)
+		}
+
+		if len(notification.Phone) > 0 {
+			smsOk := notifications.SendSms(notification.Phone, notification.Message)
+			if smsOk {
+				log.Println("Sms sent")
+				//message.Ack(false)
+			}
 		}
 	}
 }

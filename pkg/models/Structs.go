@@ -35,8 +35,9 @@ type AuthToken struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
-type EmailNotification struct {
+type Notification struct {
 	Email 	string
+	Phone   string
 	Message string
 }
 
