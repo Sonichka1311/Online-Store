@@ -4,6 +4,8 @@ This is a university project for Distributed Systems course.
 # Online store
 There are some microservices such as rest-api main service for store, authorization service, big files loader and database.
 
+![schema](https://github.com/Sonichka1311/DistributedSystemsProject/blob/master/schema.png?raw=true)
+
 ## REST API
 Handlers:
 * `GET /` - get all products in shop.
