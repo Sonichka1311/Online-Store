@@ -49,8 +49,9 @@ Your file are split into small blocks and put in message queue. Then uploader se
 
 If you want to get status your uploading, you should use `GET /info` with your access token in header.
 
-## Launch
+## Install&&Launch
 ```
+git clone https://github.com/Sonichka1311/DistributedSystemsProject.git
 cd DistributedSystemsProject
 docker-compose up
 ```
